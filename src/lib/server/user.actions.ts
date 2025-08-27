@@ -79,7 +79,7 @@ export async function getLanguages() {
 export async function isCurrentUserAdmin(): Promise<boolean> {
   try {
     const user = await getCurrentUser();
-    
+
     const dbUser = await db.query.users.findFirst({
       where: eq(users.id, user.id),
     });

@@ -49,13 +49,7 @@ export default async function LessonsPage() {
             You&apos;ve learned all available words for your current level. Complete your reviews to
             master words and unlock the next level!
           </p>
-          <Button
-            as={NextLink}
-            href="/levels"
-            color="primary"
-            variant="flat"
-            className="mt-4"
-          >
+          <Button as={NextLink} href="/levels" color="primary" variant="flat" className="mt-4">
             View Level Progression
           </Button>
         </div>
@@ -77,7 +71,7 @@ export default async function LessonsPage() {
           View Level Info
         </Button>
       </div>
-      
+
       <LessonsInterface initialLessons={availableLessons} />
     </div>
   );

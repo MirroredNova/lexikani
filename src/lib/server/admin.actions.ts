@@ -6,12 +6,12 @@ import { getCurrentUser } from '@/lib/server/user.actions';
 import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import type { VocabularyAttributes } from '@/types';
+import type { VocabularyAttributes, VocabularyType } from '@/types';
 
 // Check if current user is admin
 export async function requireAdmin() {
   const user = await getCurrentUser();
-  
+
   const dbUser = await db.query.users.findFirst({
     where: eq(users.id, user.id),
   });
@@ -59,9 +59,7 @@ export async function updateLanguage(id: number, formData: FormData) {
   }
 
   try {
-    await db.update(language)
-      .set({ name, code: code.toLowerCase() })
-      .where(eq(language.id, id));
+    await db.update(language).set({ name, code: code.toLowerCase() }).where(eq(language.id, id));
 
     revalidatePath('/admin/languages');
     return { success: true };
@@ -76,7 +74,7 @@ export async function deleteLanguage(id: number) {
 
   try {
     await db.delete(language).where(eq(language.id, id));
-    
+
     revalidatePath('/admin/languages');
     return { success: true };
   } catch (error) {
@@ -115,7 +113,7 @@ export async function createVocabulary(formData: FormData) {
       word,
       meaning,
       level,
-      type: type as any,
+      type: type as VocabularyType,
       attributes,
     });
 
@@ -150,12 +148,13 @@ export async function updateVocabulary(id: number, formData: FormData) {
   }
 
   try {
-    await db.update(vocabulary)
+    await db
+      .update(vocabulary)
       .set({
         word,
         meaning,
         level,
-        type: type as any,
+        type: type as VocabularyType,
         attributes,
       })
       .where(eq(vocabulary.id, id));
@@ -173,7 +172,7 @@ export async function deleteVocabulary(id: number) {
 
   try {
     await db.delete(vocabulary).where(eq(vocabulary.id, id));
-    
+
     revalidatePath('/admin/vocabulary');
     return { success: true };
   } catch (error) {
@@ -185,7 +184,7 @@ export async function deleteVocabulary(id: number) {
 // Get data for admin pages
 export async function getLanguagesForAdmin() {
   await requireAdmin();
-  
+
   return await db.query.language.findMany({
     orderBy: (language, { asc }) => [asc(language.name)],
   });
@@ -193,7 +192,7 @@ export async function getLanguagesForAdmin() {
 
 export async function getVocabularyForAdmin(languageId?: number) {
   await requireAdmin();
-  
+
   const vocabularyResult = await db.query.vocabulary.findMany({
     with: {
       language: true,
@@ -201,7 +200,7 @@ export async function getVocabularyForAdmin(languageId?: number) {
     orderBy: (vocabulary, { asc }) => [asc(vocabulary.level), asc(vocabulary.word)],
     ...(languageId && { where: eq(vocabulary.languageId, languageId) }),
   });
-  
+
   return vocabularyResult.map(item => ({
     ...item,
     attributes: item.attributes as Record<string, unknown> | null,
@@ -221,9 +220,7 @@ export async function toggleUserAdmin(userId: string) {
       return { error: 'User not found' };
     }
 
-    await db.update(users)
-      .set({ isAdmin: !user.isAdmin })
-      .where(eq(users.id, userId));
+    await db.update(users).set({ isAdmin: !user.isAdmin }).where(eq(users.id, userId));
 
     revalidatePath('/admin/users');
     return { success: true };
@@ -235,7 +232,7 @@ export async function toggleUserAdmin(userId: string) {
 
 export async function getUsersForAdmin() {
   await requireAdmin();
-  
+
   return await db.query.users.findMany({
     orderBy: (users, { desc }) => [desc(users.createdAt)],
   });

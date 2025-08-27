@@ -5,8 +5,6 @@ export type Language = {
   code: string;
 };
 
-
-
 export type VocabularyType =
   | 'noun'
   | 'verb'

@@ -7,7 +7,6 @@ import { getCurrentUser, ensureUserExists } from '@/lib/server/user.actions';
 import type { VocabularyItem, ReviewItem, VocabularyAttributes } from '@/types';
 import { eq, and, lte, isNull, ne, count, gte, isNotNull } from 'drizzle-orm';
 
-
 export async function getUnlockedLevel(languageId: number): Promise<number> {
   const user = await getCurrentUser();
   await ensureUserExists(user.id, user.email || '');
@@ -190,14 +189,6 @@ export async function getAvailableLessons(
   }
 
   return mappedVocab;
-}
-
-/**
- * Get level progression information for UI display
- */
-export async function getLevelProgressionInfo(languageId: number) {
-  const unlockedLevel = await getUnlockedLevel(languageId);
-  return await getProgressionSummary(languageId, unlockedLevel);
 }
 
 export async function getReviewsReady(languageId: number): Promise<ReviewItem[]> {

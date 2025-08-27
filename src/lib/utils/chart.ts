@@ -52,5 +52,3 @@ export const REVIEW_COUNT_COLORS = [
 export function getReviewCountBarColor(count: number): string {
   return getValueBasedColor(count, REVIEW_COUNT_COLORS);
 }
-
-

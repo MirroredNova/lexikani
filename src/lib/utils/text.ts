@@ -47,7 +47,7 @@ export function calculateLevenshteinDistance(str1: string, str2: string): number
       matrix[i][j] = Math.min(
         matrix[i - 1][j] + 1, // deletion
         matrix[i][j - 1] + 1, // insertion
-        matrix[i - 1][j - 1] + cost // substitution
+        matrix[i - 1][j - 1] + cost, // substitution
       );
     }
   }
@@ -63,7 +63,7 @@ export function fuzzyMatchText(userInput: string, correctAnswer: string): boolea
   // First try exact match after normalization (current behavior)
   const normalizedUser = normalizeNorwegianText(userInput);
   const normalizedCorrect = normalizeNorwegianText(correctAnswer);
-  
+
   if (normalizedUser === normalizedCorrect) {
     return true;
   }
@@ -71,7 +71,7 @@ export function fuzzyMatchText(userInput: string, correctAnswer: string): boolea
   // Additional normalization for fuzzy matching
   const cleanUser = normalizedUser.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ');
   const cleanCorrect = normalizedCorrect.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ');
-  
+
   if (cleanUser === cleanCorrect) {
     return true;
   }
@@ -79,19 +79,19 @@ export function fuzzyMatchText(userInput: string, correctAnswer: string): boolea
   // Calculate edit distance
   const distance = calculateLevenshteinDistance(cleanUser, cleanCorrect);
   const maxLength = Math.max(cleanUser.length, cleanCorrect.length);
-  
+
   // Reject if length difference is too significant (indicates different words)
   const lengthDifference = Math.abs(cleanUser.length - cleanCorrect.length);
   const lengthChangeRatio = lengthDifference / cleanCorrect.length;
-  
+
   // Be very strict about length changes for short words
   if (cleanCorrect.length <= 5 && lengthChangeRatio > 0.2) {
     return false; // More than 20% length change in short words = likely different word
   }
-  
+
   // Smart threshold based on answer length and type
   let threshold: number;
-  
+
   if (maxLength <= 3) {
     // Very short words: no typos allowed (too easy to change meaning)
     threshold = 0;
@@ -103,7 +103,7 @@ export function fuzzyMatchText(userInput: string, correctAnswer: string): boolea
     threshold = Math.min(Math.max(Math.floor(maxLength * 0.12), 1), 2); // ~12% error rate, min 1, max 2
   } else {
     // Long words/phrases: allow more typos but cap at reasonable limit
-    threshold = Math.min(Math.max(Math.floor(maxLength * 0.10), 1), 3); // ~10% error rate, min 1, max 3 typos
+    threshold = Math.min(Math.max(Math.floor(maxLength * 0.1), 1), 3); // ~10% error rate, min 1, max 3 typos
   }
 
   return distance <= threshold;
@@ -113,31 +113,34 @@ export function fuzzyMatchText(userInput: string, correctAnswer: string): boolea
  * Get feedback about why an answer was close but not quite right
  * Useful for showing helpful hints to users
  */
-export function getAnswerFeedback(userInput: string, correctAnswer: string): {
+export function getAnswerFeedback(
+  userInput: string,
+  correctAnswer: string,
+): {
   isExact: boolean;
   isFuzzyMatch: boolean;
   suggestion?: string;
 } {
   const normalizedUser = normalizeNorwegianText(userInput);
   const normalizedCorrect = normalizeNorwegianText(correctAnswer);
-  
+
   const isExact = normalizedUser === normalizedCorrect;
   const isFuzzyMatch = fuzzyMatchText(userInput, correctAnswer);
-  
+
   let suggestion: string | undefined;
-  
+
   if (!isExact && isFuzzyMatch) {
-    suggestion = "Close! Check your spelling.";
+    suggestion = 'Close! Check your spelling.';
   } else if (!isFuzzyMatch) {
     // Check if it's just a Norwegian character issue
     const hasNorwegianChars = /[æøå]/i.test(correctAnswer);
     const userHasPlainChars = /[aeo]/i.test(userInput) && !/[æøå]/i.test(userInput);
-    
+
     if (hasNorwegianChars && userHasPlainChars) {
       suggestion = "Remember: you can type 'ae' for 'æ', 'o' for 'ø', 'a' for 'å'";
     }
   }
-  
+
   return { isExact, isFuzzyMatch, suggestion };
 }
 

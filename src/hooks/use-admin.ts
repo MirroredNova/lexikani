@@ -17,7 +17,7 @@ export function useAdmin() {
 
       try {
         const supabase = createClient();
-        
+
         // Get user metadata which might contain admin flag
         // Or make a request to check admin status
         const { data, error } = await supabase
