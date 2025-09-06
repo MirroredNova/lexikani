@@ -10,10 +10,9 @@ interface ReviewScheduleItem {
 
 interface ReviewScheduleProps {
   schedule: ReviewScheduleItem[];
-  currentTime?: Date; // Optional prop for server-side time
 }
 
-export default function ReviewSchedule({ schedule, currentTime }: ReviewScheduleProps) {
+export default function ReviewSchedule({ schedule }: ReviewScheduleProps) {
   const maxCount = Math.max(...schedule.map(item => item.count));
 
   const totalReviews = schedule.reduce((sum, item) => sum + item.count, 0);
@@ -58,10 +57,10 @@ export default function ReviewSchedule({ schedule, currentTime }: ReviewSchedule
                     <div
                       className={`w-full ${getReviewCountBarColor(item.count)} rounded-t transition-all group-hover:opacity-80`}
                       style={{ height: `${calculateBarHeight(item.count, maxCount)}px` }}
-                      title={`${item.count} reviews at ${formatCompactHour(item.hour, currentTime)}`}
+                      title={`${item.count} reviews at ${formatCompactHour(item.hour)}`}
                     />
                     <div className="text-[10px] text-gray-500 dark:text-gray-500 mt-1 text-center whitespace-nowrap">
-                      {formatCompactHour(item.hour, currentTime)}
+                      {formatCompactHour(item.hour)}
                     </div>
                   </div>
                 ))}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@heroui/button';
 import type { VocabularyItem, QuizQuestion } from '@/types';
-import { ProgressBar, QuestionCard } from '@/components/shared';
+import { ProgressBar, QuestionCard, VocabularyCard } from '@/components/shared';
 import { fuzzyMatchText, generateQuizQuestions, calculateProgress } from '@/lib/utils';
 
 interface QuizSectionProps {
@@ -34,6 +34,7 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
     wrongAnswers: QuizQuestion[];
     retestWrongAnswers: QuizQuestion[];
   } | null>(null);
+  const [showWordDetails, setShowWordDetails] = useState(false);
 
   useEffect(() => {
     const shuffledQuestions = generateQuizQuestions(words);
@@ -52,6 +53,7 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
     // Disable undo when moving to next question
     setCanUndo(false);
     setLastAnswer(null);
+    setShowWordDetails(false);
 
     if (currentQuestionIndex < questions.length - 1) {
       // Move to next question
@@ -105,6 +107,10 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
     setLastAnswer(null);
   }, [canUndo, lastAnswer]);
 
+  const handleShowDetails = useCallback(() => {
+    setShowWordDetails(true);
+  }, []);
+
   const handleSubmitAnswer = () => {
     if (!userInput.trim()) return;
 
@@ -125,7 +131,6 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
       if (!isRetestPhase) {
         setFirstAttemptCorrect(prev => prev + 1);
       }
-      setCanUndo(false); // No undo for correct answers
     } else {
       // Track wrong answers appropriately based on phase
       if (!isRetestPhase) {
@@ -135,11 +140,11 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
         // Retest phase - add to retest wrong answers for another round
         setRetestWrongAnswers(prev => [...prev, currentQuestion]);
       }
-
-      // Enable undo for wrong answers
-      setCanUndo(true);
-      setLastAnswer(currentState);
     }
+
+    // Always enable undo and store current state
+    setCanUndo(true);
+    setLastAnswer(currentState);
 
     setShowResult(true);
   };
@@ -211,24 +216,36 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
         isCorrect={fuzzyMatchText(userInput, currentQuestion.correctAnswer)}
         correctAnswer={currentQuestion.correctAnswer}
         showRetestIndicator={isRetestPhase}
+        wordData={{
+          word: currentQuestion.word.word,
+          meaning: currentQuestion.word.meaning,
+          type: currentQuestion.word.type,
+          level: currentQuestion.word.level,
+          attributes: currentQuestion.word.attributes,
+        }}
+        onShowDetails={handleShowDetails}
         additionalFeedback={
           showResult && (
             <>
+              {showWordDetails && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-3">
+                    Word Details
+                  </h4>
+                  <VocabularyCard
+                    word={currentQuestion.word.word}
+                    meaning={currentQuestion.word.meaning}
+                    type={currentQuestion.word.type}
+                    level={currentQuestion.word.level}
+                    attributes={currentQuestion.word.attributes}
+                    variant="simple"
+                  />
+                </div>
+              )}
               {!fuzzyMatchText(userInput, currentQuestion.correctAnswer) && !isRetestPhase && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                   <p className="text-yellow-800 dark:text-yellow-200 text-sm">
                     This word will be tested again in this session.
-                  </p>
-                </div>
-              )}
-              {canUndo && !fuzzyMatchText(userInput, currentQuestion.correctAnswer) && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <p className="text-blue-800 dark:text-blue-200 text-sm font-medium">
-                    Made a typo? Press{' '}
-                    <kbd className="bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded text-xs font-mono">
-                      Backspace
-                    </kbd>{' '}
-                    to undo and try again
                   </p>
                 </div>
               )}

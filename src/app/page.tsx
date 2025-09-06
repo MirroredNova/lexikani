@@ -66,7 +66,7 @@ export default async function Page() {
 
       {/* Review Schedule */}
       <div className="mt-6">
-        <ReviewSchedule schedule={reviewSchedule} currentTime={new Date()} />
+        <ReviewSchedule schedule={reviewSchedule} />
       </div>
     </div>
   );

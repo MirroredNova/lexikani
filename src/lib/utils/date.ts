@@ -4,14 +4,9 @@
 
 /**
  * Format hour for compact display in schedule views
- * Returns formatted time with day indicators (+1, +2, etc.)
+ * Returns formatted time (e.g., "9A", "2P")
  */
-export function formatCompactHour(date: Date, referenceTime?: Date): string {
-  const now = referenceTime || new Date();
-  const isToday = date.toDateString() === now.toDateString();
-  const isTomorrow =
-    date.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
-
+export function formatCompactHour(date: Date): string {
   const timeString = date
     .toLocaleTimeString([], {
       hour: 'numeric',
@@ -20,14 +15,7 @@ export function formatCompactHour(date: Date, referenceTime?: Date): string {
     .replace(' AM', 'A')
     .replace(' PM', 'P');
 
-  if (isToday) {
-    return timeString;
-  } else if (isTomorrow) {
-    return `${timeString} +1`;
-  } else {
-    const daysFromNow = Math.ceil((date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
-    return `${timeString} +${daysFromNow}`;
-  }
+  return timeString;
 }
 
 /**

@@ -6,6 +6,7 @@ import { Button } from '@heroui/button';
 import { Chip } from '@heroui/chip';
 import { Input } from '@heroui/input';
 import { SparklesIcon, XCircleIcon, LightBulbIcon } from '@heroicons/react/24/outline';
+import type { VocabularyAttributes } from '@/types';
 
 interface QuestionCardProps {
   questionNumber: number;
@@ -24,6 +25,14 @@ interface QuestionCardProps {
   allowEnterNext?: boolean;
   additionalFeedback?: React.ReactNode;
   showRetestIndicator?: boolean;
+  wordData?: {
+    word: string;
+    meaning: string;
+    type: string;
+    level: number;
+    attributes: VocabularyAttributes | null;
+  };
+  onShowDetails?: () => void;
 }
 
 export default function QuestionCard({
@@ -43,8 +52,10 @@ export default function QuestionCard({
   allowEnterNext = true,
   additionalFeedback,
   showRetestIndicator = false,
+  onShowDetails,
 }: QuestionCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showDetails, setShowDetails] = React.useState(false);
 
   // Handle keyboard shortcuts
   const handleKeyPress = useCallback(
@@ -56,9 +67,23 @@ export default function QuestionCard({
         } else if (showResult && allowEnterNext) {
           onNext();
         }
+      } else if ((e.key === ' ' || e.key === 'Tab') && showResult && !isCorrect && onShowDetails) {
+        // Show details on Space or Tab when answer is wrong
+        e.preventDefault();
+        setShowDetails(true);
+        onShowDetails();
       }
     },
-    [showResult, userInput, allowEnterSubmit, allowEnterNext, onSubmit, onNext],
+    [
+      showResult,
+      userInput,
+      allowEnterSubmit,
+      allowEnterNext,
+      onSubmit,
+      onNext,
+      isCorrect,
+      onShowDetails,
+    ],
   );
 
   // Focus input and setup keyboard listeners
@@ -67,6 +92,11 @@ export default function QuestionCard({
       inputRef.current.focus();
     }
   }, [showResult]);
+
+  // Reset showDetails when question changes
+  useEffect(() => {
+    setShowDetails(false);
+  }, [questionNumber]);
 
   // Global keyboard listener for Enter key
   useEffect(() => {
@@ -160,18 +190,45 @@ export default function QuestionCard({
                     You wrote: <strong>{userInput}</strong>
                   </p>
                 )}
-                {correctAnswer && (
-                  <p className="text-sm mt-1">
-                    The correct answer was: <strong>{correctAnswer}</strong>
-                  </p>
+
+                {!showDetails && onShowDetails && (
+                  <div className="mt-3 space-y-2">
+                    <Button
+                      size="sm"
+                      color="primary"
+                      variant="light"
+                      onPress={() => {
+                        setShowDetails(true);
+                        onShowDetails();
+                      }}
+                    >
+                      Show Answer
+                    </Button>
+                    <p className="text-xs opacity-75">
+                      Or press{' '}
+                      <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Space</kbd>{' '}
+                      to see details
+                    </p>
+                  </div>
                 )}
-                {correctAnswer && /[æøå]/i.test(correctAnswer) && (
-                  <p className="text-xs mt-1 opacity-75 flex items-center justify-center gap-1">
-                    <LightBulbIcon className="w-4 h-4" />
-                    Tip: You can type &quot;ae&quot; for &quot;æ&quot;, &quot;o&quot; for
-                    &quot;ø&quot;, &quot;a&quot; for &quot;å&quot;
-                  </p>
+
+                {(showDetails || !onShowDetails) && (
+                  <>
+                    {correctAnswer && (
+                      <p className="text-sm mt-1">
+                        The correct answer was: <strong>{correctAnswer}</strong>
+                      </p>
+                    )}
+                    {correctAnswer && /[æøå]/i.test(correctAnswer) && (
+                      <p className="text-xs mt-1 opacity-75 flex items-center justify-center gap-1">
+                        <LightBulbIcon className="w-4 h-4" />
+                        Tip: You can type &quot;ae&quot; for &quot;æ&quot;, &quot;o&quot; for
+                        &quot;ø&quot;, &quot;a&quot; for &quot;å&quot;
+                      </p>
+                    )}
+                  </>
                 )}
+
                 <p className="text-xs mt-2 opacity-75">
                   Press{' '}
                   <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Enter</kbd> to

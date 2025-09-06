@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@heroui/button';
 import type { ReviewItem, ReviewQuestion, ReviewPair } from '@/types';
 import { reviewWord } from '@/lib/server/vocabulary.actions';
-import { ProgressBar, QuestionCard } from '@/components/shared';
+import { ProgressBar, QuestionCard, VocabularyCard } from '@/components/shared';
 import { fuzzyMatchText, generateReviewQuestions, calculateProgress } from '@/lib/utils';
 
 interface ReviewInterfaceProps {
@@ -30,6 +30,7 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
     reviewPairs: Map<string, ReviewPair>;
     showPairResult: boolean;
   } | null>(null);
+  const [showWordDetails, setShowWordDetails] = useState(false);
 
   useEffect(() => {
     const { questions: shuffledQuestions, pairs } = generateReviewQuestions(initialReviews);
@@ -46,6 +47,7 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
     // Disable undo when moving to next question
     setCanUndo(false);
     setLastAnswer(null);
+    setShowWordDetails(false);
 
     if (currentQuestionIndex < questions.length - 1) {
       // Move to next question
@@ -58,6 +60,10 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
       setReviewComplete(true);
     }
   }, [currentQuestionIndex, questions.length]);
+
+  const handleShowDetails = useCallback(() => {
+    setShowWordDetails(true);
+  }, []);
 
   const handleUndo = useCallback(() => {
     if (!canUndo || !lastAnswer) return;
@@ -91,12 +97,11 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
 
     if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
-      setCanUndo(false); // No undo for correct answers
-    } else {
-      // Enable undo for wrong answers
-      setCanUndo(true);
-      setLastAnswer(currentState);
     }
+
+    // Always enable undo and store current state
+    setCanUndo(true);
+    setLastAnswer(currentState);
 
     // Update the pair tracking
     const pairId = currentQuestion.pairId;
@@ -250,18 +255,31 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
         isCorrect={fuzzyMatchText(userInput, currentQuestion.correctAnswer)}
         correctAnswer={currentQuestion.correctAnswer}
         isProcessing={isProcessing}
+        wordData={{
+          word: currentQuestion.item.word,
+          meaning: currentQuestion.item.meaning,
+          type: currentQuestion.item.type,
+          level: currentQuestion.item.level,
+          attributes: currentQuestion.item.attributes,
+        }}
+        onShowDetails={handleShowDetails}
         additionalFeedback={
           showResult && (
             <>
-              {canUndo && !fuzzyMatchText(userInput, currentQuestion.correctAnswer) && (
+              {showWordDetails && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <p className="text-blue-800 dark:text-blue-200 text-sm font-medium">
-                    Made a typo? Press{' '}
-                    <kbd className="bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded text-xs font-mono">
-                      Backspace
-                    </kbd>{' '}
-                    to undo and try again
-                  </p>
+                  <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-3">
+                    Word Details
+                  </h4>
+                  <VocabularyCard
+                    word={currentQuestion.item.word}
+                    meaning={currentQuestion.item.meaning}
+                    type={currentQuestion.item.type}
+                    level={currentQuestion.item.level}
+                    attributes={currentQuestion.item.attributes}
+                    srsStage={currentQuestion.item.srsStage}
+                    variant="simple"
+                  />
                 </div>
               )}
               {showPairResult && (
