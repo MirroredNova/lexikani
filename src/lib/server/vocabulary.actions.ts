@@ -5,7 +5,7 @@ import { db } from '@/db/db';
 import { vocabulary, userVocabulary } from '@/db/schema';
 import { getCurrentUser, ensureUserExists } from '@/lib/server/user.actions';
 import type { VocabularyItem, ReviewItem, VocabularyAttributes } from '@/types';
-import { eq, and, lte, isNull, ne, count, gte, isNotNull } from 'drizzle-orm';
+import { eq, and, lte, isNull, ne, count, gte, isNotNull, like, or, SQL, sql } from 'drizzle-orm';
 
 export async function getUnlockedLevel(languageId: number): Promise<number> {
   const user = await getCurrentUser();
@@ -91,10 +91,11 @@ export async function getReviewSchedule(languageId: number) {
   await ensureUserExists(user.id, user.email || '');
 
   const now = new Date();
-  const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-  // Get all reviews for the next 24 hours
-  const upcomingReviews = await db
+  // Get all reviews for the next 7 days
+  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const allReviews = await db
     .select({
       nextReviewAt: userVocabulary.nextReviewAt,
     })
@@ -104,43 +105,37 @@ export async function getReviewSchedule(languageId: number) {
       and(
         eq(userVocabulary.userId, user.id),
         eq(vocabulary.languageId, languageId),
+        ne(userVocabulary.srsStage, 8), // Don't include burned items
         isNotNull(userVocabulary.nextReviewAt),
-        gte(userVocabulary.nextReviewAt, now),
-        lte(userVocabulary.nextReviewAt, next24Hours),
-        ne(userVocabulary.srsStage, 8), // Exclude burned items
+        lte(userVocabulary.nextReviewAt, in7Days), // Only next 7 days
       ),
     );
 
-  // Group reviews by hour
-  const scheduleMap = new Map<string, number>();
+  // Create hourly schedule for next 48 hours (2 days)
+  const schedule: Array<{ hour: Date; count: number }> = [];
+  for (let i = 0; i < 48; i++) {
+    const hour = new Date(now.getTime() + i * 60 * 60 * 1000);
+    // Round down to the start of the hour
+    hour.setMinutes(0, 0, 0);
 
-  // Initialize all hours for the next 24 hours with 0 reviews
-  for (let i = 0; i < 24; i++) {
-    const hourTime = new Date(now.getTime() + i * 60 * 60 * 1000);
-    hourTime.setMinutes(0, 0, 0); // Round to hour
-    const hourKey = hourTime.toISOString();
-    scheduleMap.set(hourKey, 0);
+    schedule.push({
+      hour,
+      count: 0,
+    });
   }
 
-  // Count reviews for each hour
-  upcomingReviews.forEach(review => {
-    if (review.nextReviewAt) {
-      const reviewHour = new Date(review.nextReviewAt);
-      reviewHour.setMinutes(0, 0, 0); // Round to hour
-      const hourKey = reviewHour.toISOString();
+  // Count reviews per hour
+  allReviews.forEach(review => {
+    if (!review.nextReviewAt) return;
 
-      const currentCount = scheduleMap.get(hourKey) || 0;
-      scheduleMap.set(hourKey, currentCount + 1);
+    const reviewTime = new Date(review.nextReviewAt);
+    const hoursSinceNow = Math.floor((reviewTime.getTime() - now.getTime()) / (60 * 60 * 1000));
+
+    // Only count reviews in the next 48 hours
+    if (hoursSinceNow >= 0 && hoursSinceNow < 48) {
+      schedule[hoursSinceNow].count++;
     }
   });
-
-  // Convert to array and sort by time
-  const schedule = Array.from(scheduleMap.entries())
-    .map(([hourString, count]) => ({
-      hour: new Date(hourString),
-      count,
-    }))
-    .sort((a, b) => a.hour.getTime() - b.hour.getTime());
 
   return schedule;
 }
@@ -162,6 +157,7 @@ export async function getAvailableLessons(
       meaning: vocabulary.meaning,
       type: vocabulary.type,
       attributes: vocabulary.attributes,
+      acceptedAnswers: vocabulary.acceptedAnswers,
       level: vocabulary.level,
     })
     .from(vocabulary)
@@ -176,11 +172,12 @@ export async function getAvailableLessons(
         isNull(userVocabulary.vocabularyId), // Not yet started by user
       ),
     )
-    .orderBy(vocabulary.level, vocabulary.id);
+    .orderBy(sql`RANDOM()`);
 
   const mappedVocab = availableVocab.map(item => ({
     ...item,
     attributes: item.attributes as VocabularyAttributes | null,
+    acceptedAnswers: item.acceptedAnswers as string[] | null,
   }));
 
   // If we need to limit results, just return the first N items
@@ -204,6 +201,7 @@ export async function getReviewsReady(languageId: number): Promise<ReviewItem[]>
       meaning: vocabulary.meaning,
       type: vocabulary.type,
       attributes: vocabulary.attributes,
+      acceptedAnswers: vocabulary.acceptedAnswers,
       level: vocabulary.level,
       srsStage: userVocabulary.srsStage,
       nextReviewAt: userVocabulary.nextReviewAt,
@@ -217,11 +215,13 @@ export async function getReviewsReady(languageId: number): Promise<ReviewItem[]>
         lte(userVocabulary.nextReviewAt, now),
         ne(userVocabulary.srsStage, 8), // Don't include burned items
       ),
-    );
+    )
+    .orderBy(sql`RANDOM()`);
 
   return reviewsReady.map(item => ({
     ...item,
     attributes: item.attributes as VocabularyAttributes | null,
+    acceptedAnswers: item.acceptedAnswers as string[] | null,
   }));
 }
 
@@ -246,11 +246,17 @@ export async function startLearningWord(vocabularyId: number) {
       unlockedAt: now,
     });
   }
+
+  return { success: true };
 }
 
 export async function reviewWord(vocabularyId: number, correct: boolean) {
   const user = await getCurrentUser();
+  await ensureUserExists(user.id, user.email || '');
 
+  const now = new Date();
+
+  // Get current user vocabulary record
   const userWord = await db.query.userVocabulary.findFirst({
     where: and(eq(userVocabulary.userId, user.id), eq(userVocabulary.vocabularyId, vocabularyId)),
   });
@@ -259,36 +265,41 @@ export async function reviewWord(vocabularyId: number, correct: boolean) {
     throw new Error('Word not found in user vocabulary');
   }
 
-  const now = new Date();
-  let newStage: number;
-  let nextReviewAt: Date | null;
+  let newSrsStage = userWord.srsStage;
+  let nextReviewAt: Date | null = null;
 
   if (correct) {
-    // Move up one stage
-    newStage = Math.min(userWord.srsStage + 1, 8);
+    // Move to next SRS stage (max 8)
+    if (newSrsStage < 8) {
+      newSrsStage++;
+    }
   } else {
-    // Move back to apprentice 1 (stage 0)
-    newStage = 0;
+    // Reset to Apprentice 1 (stage 0) on incorrect answer
+    newSrsStage = 0;
   }
 
   // Calculate next review time
-  if (newStage === 8) {
-    // Burned - no more reviews
-    nextReviewAt = null;
-  } else {
-    const intervalHours = SRS_INTERVALS[newStage as keyof typeof SRS_INTERVALS] as number;
+  const intervalHours = SRS_INTERVALS[newSrsStage as keyof typeof SRS_INTERVALS];
+  if (intervalHours !== null) {
     nextReviewAt = new Date(now.getTime() + intervalHours * 60 * 60 * 1000);
   }
+  // If intervalHours is null (burned), nextReviewAt stays null
 
-  // Update the record
+  // Update user vocabulary
   await db
     .update(userVocabulary)
     .set({
-      srsStage: newStage,
-      nextReviewAt: nextReviewAt,
+      srsStage: newSrsStage,
+      nextReviewAt,
       updatedAt: now,
     })
     .where(and(eq(userVocabulary.userId, user.id), eq(userVocabulary.vocabularyId, vocabularyId)));
+
+  return {
+    success: true,
+    newSrsStage,
+    nextReviewAt,
+  };
 }
 
 export async function completeLesson(vocabularyIds: number[]) {
@@ -334,11 +345,13 @@ export async function getAllVocabularyWithProgress(languageId: number) {
       type: vocabulary.type,
       level: vocabulary.level,
       attributes: vocabulary.attributes,
+      acceptedAnswers: vocabulary.acceptedAnswers,
       // User progress fields (will be null if not unlocked)
       srsStage: userVocabulary.srsStage,
       nextReviewAt: userVocabulary.nextReviewAt,
       unlockedAt: userVocabulary.unlockedAt,
       updatedAt: userVocabulary.updatedAt,
+      notes: userVocabulary.notes,
     })
     .from(vocabulary)
     .leftJoin(
@@ -359,7 +372,148 @@ export async function getAllVocabularyWithProgress(languageId: number) {
     nextReviewAt: Date | null;
     unlockedAt: Date | null;
     updatedAt: Date | null;
+    notes: string | null;
   }>;
+}
+
+type VocabularyFilters = {
+  searchTerm?: string;
+  typeFilter?: string;
+  srsFilter?: string;
+  sortBy?: string;
+};
+
+export async function getPaginatedVocabularyWithProgress(
+  languageId: number,
+  page: number = 1,
+  pageSize: number = 50,
+  filters: VocabularyFilters = {},
+) {
+  const user = await getCurrentUser();
+  await ensureUserExists(user.id, user.email || '');
+
+  const offset = (page - 1) * pageSize;
+
+  // Build where conditions
+  const whereConditions: SQL<unknown>[] = [eq(vocabulary.languageId, languageId)];
+
+  // Add search filter
+  if (filters.searchTerm?.trim()) {
+    const searchTerm = `%${filters.searchTerm.trim()}%`;
+    const searchCondition = or(
+      like(vocabulary.word, searchTerm),
+      like(vocabulary.meaning, searchTerm),
+    );
+    if (searchCondition) {
+      whereConditions.push(searchCondition);
+    }
+  }
+
+  // Add type filter
+  if (filters.typeFilter && filters.typeFilter !== 'all') {
+    whereConditions.push(eq(vocabulary.type, filters.typeFilter));
+  }
+
+  // SRS filter conditions
+  const srsConditions: SQL<unknown>[] = [];
+  if (filters.srsFilter && filters.srsFilter !== 'all') {
+    if (filters.srsFilter === 'unlearned') {
+      const condition = isNull(userVocabulary.srsStage);
+      if (condition) srsConditions.push(condition);
+    } else if (filters.srsFilter === 'apprentice') {
+      const condition = and(gte(userVocabulary.srsStage, 0), lte(userVocabulary.srsStage, 3));
+      if (condition) srsConditions.push(condition);
+    } else if (filters.srsFilter === 'guru') {
+      const condition = and(gte(userVocabulary.srsStage, 4), lte(userVocabulary.srsStage, 5));
+      if (condition) srsConditions.push(condition);
+    } else if (filters.srsFilter === 'master') {
+      srsConditions.push(eq(userVocabulary.srsStage, 6));
+    } else if (filters.srsFilter === 'enlightened') {
+      srsConditions.push(eq(userVocabulary.srsStage, 7));
+    } else if (filters.srsFilter === 'burned') {
+      srsConditions.push(eq(userVocabulary.srsStage, 8));
+    }
+  }
+
+  const allConditions =
+    srsConditions.length > 0 ? and(...whereConditions, ...srsConditions) : and(...whereConditions);
+
+  // Get total count for pagination
+  const totalCountResult = await db
+    .select({ count: count() })
+    .from(vocabulary)
+    .leftJoin(
+      userVocabulary,
+      and(eq(userVocabulary.vocabularyId, vocabulary.id), eq(userVocabulary.userId, user.id)),
+    )
+    .where(allConditions);
+
+  const totalCount = totalCountResult[0]?.count || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Get paginated data with sorting
+  let orderByClause;
+  if (filters.sortBy === 'word') {
+    orderByClause = [vocabulary.word];
+  } else if (filters.sortBy === 'meaning') {
+    orderByClause = [vocabulary.meaning];
+  } else if (filters.sortBy === 'type') {
+    orderByClause = [vocabulary.type, vocabulary.word];
+  } else if (filters.sortBy === 'srs') {
+    orderByClause = [userVocabulary.srsStage, vocabulary.word];
+  } else {
+    // Default: level
+    orderByClause = [vocabulary.level, vocabulary.word];
+  }
+
+  const vocabularyData = await db
+    .select({
+      id: vocabulary.id,
+      word: vocabulary.word,
+      meaning: vocabulary.meaning,
+      type: vocabulary.type,
+      level: vocabulary.level,
+      attributes: vocabulary.attributes,
+      acceptedAnswers: vocabulary.acceptedAnswers,
+      srsStage: userVocabulary.srsStage,
+      nextReviewAt: userVocabulary.nextReviewAt,
+      unlockedAt: userVocabulary.unlockedAt,
+      updatedAt: userVocabulary.updatedAt,
+      notes: userVocabulary.notes,
+    })
+    .from(vocabulary)
+    .leftJoin(
+      userVocabulary,
+      and(eq(userVocabulary.vocabularyId, vocabulary.id), eq(userVocabulary.userId, user.id)),
+    )
+    .where(allConditions)
+    .orderBy(...orderByClause)
+    .limit(pageSize)
+    .offset(offset);
+
+  return {
+    data: vocabularyData as Array<{
+      id: number;
+      word: string;
+      meaning: string;
+      type: string;
+      level: number;
+      attributes: VocabularyAttributes | null;
+      srsStage: number | null;
+      nextReviewAt: Date | null;
+      unlockedAt: Date | null;
+      updatedAt: Date | null;
+      notes: string | null;
+    }>,
+    pagination: {
+      page,
+      pageSize,
+      totalCount,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+    },
+  };
 }
 
 /**
@@ -377,11 +531,13 @@ export async function getVocabularyByLevel(languageId: number, level: number) {
       type: vocabulary.type,
       level: vocabulary.level,
       attributes: vocabulary.attributes,
+      acceptedAnswers: vocabulary.acceptedAnswers,
       // User progress fields (will be null if not unlocked)
       srsStage: userVocabulary.srsStage,
       nextReviewAt: userVocabulary.nextReviewAt,
       unlockedAt: userVocabulary.unlockedAt,
       updatedAt: userVocabulary.updatedAt,
+      notes: userVocabulary.notes,
     })
     .from(vocabulary)
     .leftJoin(
@@ -394,5 +550,6 @@ export async function getVocabularyByLevel(languageId: number, level: number) {
   return vocabularyForLevel.map(item => ({
     ...item,
     attributes: item.attributes as VocabularyAttributes | null,
+    acceptedAnswers: item.acceptedAnswers as string[] | null,
   }));
 }

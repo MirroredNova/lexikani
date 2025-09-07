@@ -2,7 +2,6 @@ import {
   boolean,
   integer,
   jsonb,
-  pgEnum,
   pgTable,
   primaryKey,
   serial,
@@ -10,17 +9,6 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-
-// ENUMS
-export const vocabularyTypeEnum = pgEnum('vocabulary_type', [
-  'noun',
-  'verb',
-  'adjective',
-  'adverb',
-  'phrase',
-  'sentence',
-  'number',
-]);
 
 // TABLES
 export const language = pgTable('language', {
@@ -46,13 +34,19 @@ export const vocabulary = pgTable('vocabulary', {
   word: text('word').notNull(),
   meaning: text('meaning').notNull(), // English translation
   level: integer('level').notNull(),
-  type: vocabularyTypeEnum('type').notNull(),
+  type: text('type').notNull(),
   /**
    * Store type-specific attributes.
    * For a 'noun': { gender: 'masculine', plural: 'gatos' }
    * For a 'verb': { infinitive: 'hablar', tense: 'present', form: 'hablo' }
    */
   attributes: jsonb('attributes'),
+  /**
+   * Array of acceptable alternative answers for this word.
+   * Example: For "du" with meaning "you (singular)", acceptedAnswers could be ["you", "thou"]
+   * This allows more flexible quiz validation while keeping the primary meaning descriptive.
+   */
+  acceptedAnswers: jsonb('accepted_answers'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 

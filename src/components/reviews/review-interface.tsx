@@ -4,8 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@heroui/button';
 import type { ReviewItem, ReviewQuestion, ReviewPair } from '@/types';
 import { reviewWord } from '@/lib/server/vocabulary.actions';
-import { ProgressBar, QuestionCard, VocabularyCard } from '@/components/shared';
-import { fuzzyMatchText, generateReviewQuestions, calculateProgress } from '@/lib/utils';
+import { ProgressBar, QuestionCard, VocabularyCard, VocabularyNotes } from '@/components/shared';
+import {
+  fuzzyMatchText,
+  generateReviewQuestions,
+  calculateProgress,
+  generateAcceptableAnswers,
+} from '@/lib/utils';
 
 interface ReviewInterfaceProps {
   initialReviews: ReviewItem[];
@@ -62,7 +67,7 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
   }, [currentQuestionIndex, questions.length]);
 
   const handleShowDetails = useCallback(() => {
-    setShowWordDetails(true);
+    setShowWordDetails(prev => !prev);
   }, []);
 
   const handleUndo = useCallback(() => {
@@ -92,7 +97,20 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
       showPairResult: showPairResult,
     };
 
-    const isCorrect = fuzzyMatchText(userInput, currentQuestion.correctAnswer);
+    // Get acceptable answers - only use for word-to-meaning direction
+    let acceptableAnswers: string[] | undefined;
+
+    if (currentQuestion.direction === 'word-to-meaning') {
+      // User types English meaning - use stored alternatives or generate from meaning
+      acceptableAnswers =
+        currentQuestion.item.acceptedAnswers ||
+        generateAcceptableAnswers(currentQuestion.correctAnswer);
+    } else {
+      // User types Norwegian word - don't use alternatives (Norwegian should be exact)
+      acceptableAnswers = undefined;
+    }
+
+    const isCorrect = fuzzyMatchText(userInput, currentQuestion.correctAnswer, acceptableAnswers);
     currentState.wasCorrect = isCorrect;
 
     if (isCorrect) {
@@ -252,7 +270,7 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
         onSubmit={handleSubmitAnswer}
         onNext={handleNextQuestion}
         showResult={showResult}
-        isCorrect={fuzzyMatchText(userInput, currentQuestion.correctAnswer)}
+        isCorrect={lastAnswer?.wasCorrect ?? false}
         correctAnswer={currentQuestion.correctAnswer}
         isProcessing={isProcessing}
         wordData={{
@@ -267,11 +285,12 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
           showResult && (
             <>
               {showWordDetails && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-4">
                   <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-3">
                     Word Details
                   </h4>
                   <VocabularyCard
+                    id={currentQuestion.item.id}
                     word={currentQuestion.item.word}
                     meaning={currentQuestion.item.meaning}
                     type={currentQuestion.item.type}
@@ -280,6 +299,14 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
                     srsStage={currentQuestion.item.srsStage}
                     variant="simple"
                   />
+                  <div className="flex justify-center pt-2">
+                    <VocabularyNotes
+                      vocabularyId={currentQuestion.item.id}
+                      word={currentQuestion.item.word}
+                      variant="button"
+                      size="sm"
+                    />
+                  </div>
                 </div>
               )}
               {showPairResult && (

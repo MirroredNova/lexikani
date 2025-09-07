@@ -57,9 +57,36 @@ export function calculateLevenshteinDistance(str1: string, str2: string): number
 
 /**
  * Enhanced text comparison that allows for typos and minor variations
- * Returns true if the user input is "close enough" to the correct answer
+ * Returns true if the user input is "close enough" to the correct answer OR any acceptable alternatives
  */
-export function fuzzyMatchText(userInput: string, correctAnswer: string): boolean {
+export function fuzzyMatchText(
+  userInput: string,
+  correctAnswer: string,
+  acceptableAnswers?: string[],
+): boolean {
+  // Create a list of all answers to check against
+  const allAnswers = [correctAnswer];
+
+  // Add acceptable alternatives if provided
+  if (acceptableAnswers && Array.isArray(acceptableAnswers)) {
+    allAnswers.push(...acceptableAnswers);
+  }
+
+  // Try to match against any of the acceptable answers
+  for (const answer of allAnswers) {
+    if (fuzzyMatchSingle(userInput, answer)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Internal function to match against a single answer
+ * (The original fuzzyMatchText logic extracted into this helper)
+ */
+function fuzzyMatchSingle(userInput: string, correctAnswer: string): boolean {
   // First try exact match after normalization (current behavior)
   const normalizedUser = normalizeNorwegianText(userInput);
   const normalizedCorrect = normalizeNorwegianText(correctAnswer);
@@ -116,6 +143,7 @@ export function fuzzyMatchText(userInput: string, correctAnswer: string): boolea
 export function getAnswerFeedback(
   userInput: string,
   correctAnswer: string,
+  acceptableAnswers?: string[],
 ): {
   isExact: boolean;
   isFuzzyMatch: boolean;
@@ -125,7 +153,7 @@ export function getAnswerFeedback(
   const normalizedCorrect = normalizeNorwegianText(correctAnswer);
 
   const isExact = normalizedUser === normalizedCorrect;
-  const isFuzzyMatch = fuzzyMatchText(userInput, correctAnswer);
+  const isFuzzyMatch = fuzzyMatchText(userInput, correctAnswer, acceptableAnswers);
 
   let suggestion: string | undefined;
 
@@ -142,6 +170,135 @@ export function getAnswerFeedback(
   }
 
   return { isExact, isFuzzyMatch, suggestion };
+}
+
+/**
+ * Auto-generate acceptable answers from a meaning string
+ * Extracts alternatives from common patterns like parentheses and commas
+ */
+export function generateAcceptableAnswers(meaning: string): string[] {
+  const answers = new Set<string>();
+
+  // Grammatical descriptors that should NOT be accepted as answers
+  const descriptorBlacklist = new Set([
+    'singular',
+    'plural',
+    'common',
+    'neuter',
+    'masculine',
+    'feminine',
+    'definite',
+    'indefinite',
+    'count',
+    'mass',
+    'object',
+    'subject',
+    'formal',
+    'informal',
+    'polite',
+    'casual',
+    'past',
+    'present',
+    'future',
+    'infinitive',
+    'imperative',
+    'subjunctive',
+    'gerund',
+    'participle',
+    'complementizer',
+    'determiner',
+    'quantifier',
+    'auxiliary',
+    'modal',
+    'reflexive',
+    'possessive',
+    'demonstrative',
+    'interrogative',
+    'relative',
+    'temporal',
+    'locative',
+  ]);
+
+  // Add the original meaning
+  answers.add(meaning.trim());
+
+  // Extract text before parentheses: "you (singular)" -> "you"
+  const beforeParens = meaning.replace(/\s*\([^)]*\)/g, '').trim();
+  if (beforeParens && beforeParens !== meaning) {
+    answers.add(beforeParens);
+  }
+
+  // Extract text inside parentheses, but only if it's not a descriptor
+  const parensMatch = meaning.match(/\(([^)]+)\)/);
+  if (parensMatch && parensMatch[1]) {
+    const insideParens = parensMatch[1].trim().toLowerCase();
+    // Only add if it's not a grammatical descriptor
+    if (insideParens && !descriptorBlacklist.has(insideParens)) {
+      answers.add(parensMatch[1].trim()); // Use original case
+    }
+  }
+
+  // Handle comma-separated alternatives: "cat, feline" -> ["cat", "feline"]
+  if (meaning.includes(',')) {
+    const commaSplit = meaning
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    commaSplit.forEach(alt => {
+      answers.add(alt);
+      // Also apply parentheses logic to each comma-separated part
+      const altBeforeParens = alt.replace(/\s*\([^)]*\)/g, '').trim();
+      if (altBeforeParens && altBeforeParens !== alt) {
+        answers.add(altBeforeParens);
+      }
+    });
+  }
+
+  // Handle slash-separated alternatives: "and/&" -> ["and", "&"]
+  if (meaning.includes('/')) {
+    const slashSplit = meaning
+      .split('/')
+      .map(s => s.trim())
+      .filter(Boolean);
+    slashSplit.forEach(alt => {
+      // Skip common non-answer terms, but allow single letters like "a"
+      const lowerAlt = alt.toLowerCase();
+      if (lowerAlt !== 'etc.' && lowerAlt !== 'etc' && lowerAlt !== '...' && alt.length > 0) {
+        // Check if this alternative contains only descriptors in parentheses
+        const hasParens = /\([^)]+\)/.test(alt);
+        const withoutParens = alt.replace(/\s*\([^)]*\)/g, '').trim();
+        const insideParens = alt
+          .match(/\(([^)]+)\)/)?.[1]
+          ?.trim()
+          .toLowerCase();
+
+        // Only add the full alternative if it's not just a descriptor
+        if (!hasParens || !descriptorBlacklist.has(insideParens || '')) {
+          answers.add(alt);
+        }
+
+        // Always add version without parenthetical descriptors
+        if (withoutParens && withoutParens !== alt && withoutParens.length > 0) {
+          answers.add(withoutParens);
+        }
+      }
+    });
+  }
+
+  // Convert to array and filter out very short or empty strings
+  // Only filter out 'a', 'an', 'the' if they're not part of the original meaning
+  const originalWords = meaning.toLowerCase().split(/[\s\/]+/);
+
+  return Array.from(answers).filter(answer => {
+    const lowerAnswer = answer.toLowerCase();
+    return (
+      answer.length > 0 &&
+      lowerAnswer !== 'the' &&
+      // Only filter out 'a' and 'an' if they're not in the original meaning
+      !(lowerAnswer === 'a' && !originalWords.includes('a')) &&
+      !(lowerAnswer === 'an' && !originalWords.includes('an'))
+    );
+  });
 }
 
 /**

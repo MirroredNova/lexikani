@@ -5,14 +5,7 @@ export type Language = {
   code: string;
 };
 
-export type VocabularyType =
-  | 'noun'
-  | 'verb'
-  | 'adjective'
-  | 'adverb'
-  | 'phrase'
-  | 'sentence'
-  | 'number';
+export type VocabularyType = string;
 
 // Grammatical attributes for different word types
 export type NounAttributes = {
@@ -97,6 +90,7 @@ export type VocabularyItem = {
   meaning: string;
   type: VocabularyType;
   attributes: VocabularyAttributes | null;
+  acceptedAnswers?: string[] | null;
   level: number;
 };
 
@@ -116,10 +110,12 @@ export type VocabularyWithProgress = {
   type: string;
   level: number;
   attributes: VocabularyAttributes | null;
+  acceptedAnswers?: string[] | null;
   srsStage: number | null;
   nextReviewAt: Date | null;
   unlockedAt: Date | null;
   updatedAt: Date | null;
+  notes: string | null;
 };
 
 // Quiz and Review types

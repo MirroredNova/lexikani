@@ -32,8 +32,7 @@ export default function LevelProgressCard({
           </span>
         </div>
         <p className="text-gray-600 dark:text-gray-400">
-          {masteredWords} of {totalWords} words mastered{' '}
-          {showUnlockMessage ? 'at Guru level or higher' : ''}
+          {masteredWords} of {totalWords} words mastered (Guru level or higher)
         </p>
         {totalWords > 0 && (
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-4">

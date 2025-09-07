@@ -6,6 +6,8 @@ export { default as StatCard } from './stat-card';
 export { default as GrammarInfo } from './grammar-info';
 export { default as QuestionCard } from './question-card';
 export { default as VocabularyCard } from './vocabulary-card';
+export { default as VocabularyNotes } from './vocabulary-notes';
+export { default as Pagination } from './pagination';
 export { default as FeatureCard } from './feature-card';
 export { default as LevelCard } from './level-card';
 export { default as LevelAccordion } from './level-accordion';

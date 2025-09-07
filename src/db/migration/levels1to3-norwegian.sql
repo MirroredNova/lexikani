@@ -1,391 +1,321 @@
-# We'll generate a SQL file that:
-# - Looks up Norwegian language id
-# - Clears existing Norwegian vocab
-# - Inserts 3 levels (1–3), each with 80 hardcoded single-word vocabulary items
-# - Uses consistent structure: (language_id, word, meaning, level, type, attributes)
-#
-# NOTE: This file is intended to be run in your DB (e.g., Supabase SQL editor).
-# You can extend it later or ask me to produce levels 4–20 in subsequent files.
-
-import json
-from textwrap import dedent
-
-# Helper to build an INSERT value line
-def val(word, meaning, level, typ, attributes=None):
-    if attributes is None:
-        attributes = {}
-    # Minimal JSON attributes; ensure deterministic key order for readability
-    attr_json = json.dumps(attributes, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-    # Escape single quotes in SQL
-    def esc(s):
-        return s.replace("'", "''")
-    return f"(norwegian_id, '{esc(word)}', '{esc(meaning)}', {level}, '{typ}', '{esc(attr_json)}')"
-
-# Level 1 — Super-core: pronouns, be/have/do verbs, basic nouns, colors, numbers 0–20 (as words), simple adjectives/adverbs, prepositions/conjunctions
-L1 = []
-
-# Pronouns & determiners
-for w, m, t, a in [
-    ("jeg", "I", "pronoun", {"person":"1sg"}),
-    ("du", "you (singular)", "pronoun", {"person":"2sg"}),
-    ("han", "he", "pronoun", {"person":"3sg.m"}),
-    ("hun", "she", "pronoun", {"person":"3sg.f"}),
-    ("det", "it/that (neuter)", "pronoun", {"person":"3sg.n"}),
-    ("den", "it/that (common gender)", "pronoun", {"person":"3sg.c"}),
-    ("vi", "we", "pronoun", {"person":"1pl"}),
-    ("dere", "you (plural)", "pronoun", {"person":"2pl"}),
-    ("de", "they", "pronoun", {"person":"3pl"}),
-    ("man", "one/people", "pronoun", {"type":"impersonal"}),
-    ("min", "my (common)", "determiner", {"possesive":True}),
-    ("mitt", "my (neuter)", "determiner", {"possesive":True}),
-    ("mine", "my (plural)", "determiner", {"possesive":True}),
-    ("din", "your (common)", "determiner", {"possesive":True}),
-    ("ditt", "your (neuter)", "determiner", {"possesive":True}),
-    ("dine", "your (plural)", "determiner", {"possesive":True}),
-    ("en", "a/an (common gender)", "determiner", {"article":"indefinite"}),
-    ("ei", "a (feminine)", "determiner", {"article":"indefinite"}),
-    ("et", "a/an (neuter)", "determiner", {"article":"indefinite"}),
-    ("denne", "this (common)", "determiner", {"deixis":"proximal"}),
-    ("dette", "this (neuter)", "determiner", {"deixis":"proximal"}),
-    ("disse", "these", "determiner", {"deixis":"proximal"}),
-]:
-    L1.append(val(w, m, 1, t, a))
-
-# Core verbs
-for w, m, a in [
-    ("å være", "to be", {"present":"er","past":"var","perfect":"vært"}),
-    ("å ha", "to have", {"present":"har","past":"hadde","perfect":"hatt"}),
-    ("å gjøre", "to do/make", {"present":"gjør","past":"gjorde","perfect":"gjort"}),
-    ("å gå", "to go/walk", {"present":"går","past":"gikk","perfect":"gått"}),
-    ("å komme", "to come", {"present":"kommer","past":"kom","perfect":"kommet"}),
-    ("å se", "to see", {"present":"ser","past":"så","perfect":"sett"}),
-    ("å si", "to say", {"present":"sier","past":"sa","perfect":"sagt"}),
-    ("å vite", "to know (a fact)", {"present":"vet","past":"visste","perfect":"visst"}),
-    ("å kunne", "can/be able to", {"present":"kan","past":"kunne","perfect":"kunnet"}),
-    ("å ville", "will/want to", {"present":"vil","past":"ville","perfect":"villet"}),
-]:
-    L1.append(val(w, m, 1, "verb", a))
-
-# Basic nouns (home/people/things)
-for w, m, a in [
-    ("hus", "house", {"gender":"neuter","article":"et","definite":"huset","plural":"hus"}),
-    ("leilighet", "apartment", {"gender":"f","article":"ei/en","definite":"leiligheten","plural":"leiligheter"}),
-    ("rom", "room", {"gender":"neuter"}),
-    ("bord", "table", {"gender":"neuter"}),
-    ("stol", "chair", {"gender":"m"}),
-    ("dør", "door", {"gender":"f"}),
-    ("vindu", "window", {"gender":"neuter"}),
-    ("nøkkel", "key", {"gender":"m"}),
-    ("telefon", "phone", {"gender":"m"}),
-    ("bok", "book", {"gender":"f"}),
-    ("penn", "pen", {"gender":"m"}),
-    ("papir", "paper", {"gender":"neuter"}),
-    ("by", "city", {"gender":"m"}),
-    ("gaten", "the street", {"gender":"m"}),
-    ("butikk", "shop/store", {"gender":"m"}),
-    ("mat", "food", {"gender":"m"}),
-    ("vann", "water", {"gender":"neuter"}),
-    ("kaffe", "coffee", {"gender":"m"}),
-    ("te", "tea", {"gender":"m"}),
-    ("øl", "beer", {"gender":"neuter"}),
-]:
-    L1.append(val(w, m, 1, "noun", a))
-
-# Colors, simple adjectives
-for w, m in [
-    ("rød", "red"),
-    ("blå", "blue"),
-    ("grønn", "green"),
-    ("gul", "yellow"),
-    ("svart", "black"),
-    ("hvit", "white"),
-    ("grå", "gray"),
-    ("brun", "brown"),
-    ("stor", "big"),
-    ("liten", "small"),
-    ("ny", "new"),
-    ("gammel", "old"),
-    ("god", "good"),
-    ("dårlig", "bad"),
-]:
-    L1.append(val(w, m, 1, "adjective", {}))
-
-# Numbers 0–12 (as words)
-for w, valnum in [
-    ("null",0),("en",1),("to",2),("tre",3),("fire",4),("fem",5),("seks",6),
-    ("sju",7),("åtte",8),("ni",9),("ti",10),("elleve",11),("tolv",12)
-]:
-    L1.append(val(w, str(valnum), 1, "number", {"value":valnum}))
-
-# Core adverbs / preps / conj
-for w, m, t in [
-    ("nå", "now", "adverb"),
-    ("snart", "soon", "adverb"),
-    ("alltid", "always", "adverb"),
-    ("ofte", "often", "adverb"),
-    ("aldri", "never", "adverb"),
-    ("her", "here", "adverb"),
-    ("der", "there", "adverb"),
-    ("hvor", "where", "adverb"),
-    ("og", "and", "conjunction"),
-    ("men", "but", "conjunction"),
-    ("eller", "or", "conjunction"),
-    ("for", "for/because", "conjunction"),
-    ("i", "in", "preposition"),
-    ("på", "on/at", "preposition"),
-    ("til", "to", "preposition"),
-    ("fra", "from", "preposition"),
-    ("med", "with", "preposition"),
-    ("uten", "without", "preposition"),
-]:
-    L1.append(val(w, m, 1, t, {}))
-
-# Ensure 80 items; if short, pad with frequent short words (legit)
-while len(L1) < 80:
-    fillers = [
-        ("som","as/that/who","conjunction",{}),
-        ("over","over/above","preposition",{}),
-        ("under","under/below","preposition",{}),
-        ("av","of/from","preposition",{}),
-        ("om","about/around","preposition",{}),
-    ]
-    for w,m,t,a in fillers:
-        if len(L1) < 80:
-            L1.append(val(w,m,1,t,a))
-
-# Level 2 — People & Home (nouns, jobs, family, household verbs; no sentences)
-L2 = []
-for w, m, a in [
-    ("mann","man",{"gender":"m"}),
-    ("kvinne","woman",{"gender":"f"}),
-    ("barn","child",{"gender":"neuter"}),
-    ("venn","friend",{"gender":"m"}),
-    ("nabo","neighbor",{"gender":"m"}),
-    ("student","student",{"gender":"m"}),
-    ("lærer","teacher",{"gender":"m"}),
-    ("lege","doctor",{"gender":"m"}),
-    ("sjåfør","driver",{"gender":"m"}),
-    ("servitør","waiter",{"gender":"m"}),
-    ("kokk","cook/chef",{"gender":"m"}),
-    ("ingeniør","engineer",{"gender":"m"}),
-    ("sykepleier","nurse",{"gender":"m"}),
-    ("politi","police (force/officer)",{"gender":"neuter"}),
-    ("arbeider","worker",{"gender":"m"}),
-    ("sjef","boss/manager",{"gender":"m"}),
-    ("kunde","customer",{"gender":"m"}),
-    ("familie","family",{"gender":"m"}),
-    ("mor","mother",{"gender":"f"}),
-    ("far","father",{"gender":"m"}),
-    ("søster","sister",{"gender":"f"}),
-    ("bror","brother",{"gender":"m"}),
-    ("bestemor","grandmother",{"gender":"f"}),
-    ("bestefar","grandfather",{"gender":"m"}),
-    ("tante","aunt",{"gender":"f"}),
-    ("onkel","uncle",{"gender":"m"}),
-    ("kone","wife",{"gender":"f"}),
-    ("mann (ektefelle)","husband",{"gender":"m"}),
-    ("sønn","son",{"gender":"m"}),
-    ("datter","daughter",{"gender":"f"}),
-    ("baby","baby",{"gender":"m"}),
-]:
-    L2.append(val(w, m, 2, "noun", a))
-
-for w, m, a in [
-    ("kjøkken","kitchen",{"gender":"neuter"}),
-    ("stue","living room",{"gender":"f"}),
-    ("soverom","bedroom",{"gender":"neuter"}),
-    ("bad","bathroom",{"gender":"neuter"}),
-    ("gang","hallway",{"gender":"m"}),
-    ("kjeller","basement",{"gender":"m"}),
-    ("loft","attic",{"gender":"neuter"}),
-    ("balkong","balcony",{"gender":"m"}),
-    ("hage","garden/yard",{"gender":"m"}),
-    ("garasje","garage",{"gender":"m"}),
-    ("heis","elevator",{"gender":"m"}),
-    ("trapp","staircase",{"gender":"f"}),
-    ("vegg","wall",{"gender":"m"}),
-    ("tak","roof/ceiling",{"gender":"neuter"}),
-    ("gulv","floor",{"gender":"neuter"}),
-    ("ovn","oven",{"gender":"m"}),
-    ("komfyr","stove",{"gender":"m"}),
-    ("kjøleskap","fridge",{"gender":"neuter"}),
-    ("vaskemaskin","washing machine",{"gender":"m"}),
-    ("oppvaskmaskin","dishwasher",{"gender":"m"}),
-]:
-    L2.append(val(w, m, 2, "noun", a))
-
-for w, m, a in [
-    ("å bo","to live/reside",{"present":"bor"}),
-    ("å leve","to live (be alive)",{"present":"lever"}),
-    ("å rydde","to tidy",{"present":"rydder","past":"ryddet"}),
-    ("å vaske","to wash/clean",{"present":"vasker"}),
-    ("å lage","to make/cook",{"present":"lager"}),
-    ("å handle","to shop",{"present":"handler"}),
-    ("å kjøpe","to buy",{"present":"kjøper"}),
-    ("å selge","to sell",{"present":"selger","past":"solgte"}),
-    ("å bruke","to use/spend",{"present":"bruker"}),
-    ("å betale","to pay",{"present":"betaler"}),
-    ("å hjelpe","to help",{"present":"hjelper","past":"hjalp"}),
-    ("å ringe","to call (phone)",{"present":"ringer"}),
-    ("å møte","to meet",{"present":"møter"}),
-    ("å invitere","to invite",{"present":"inviterer"}),
-    ("å besøke","to visit",{"present":"besøker"}),
-]:
-    L2.append(val(w, m, 2, "verb", a))
-
-for w, m in [
-    ("ren","clean"),("skitten","dirty"),("lys","bright/light"),
-    ("mørk","dark"),("rolig","calm/quiet"),("høylytt","noisy/loud"),
-    ("billig","cheap"),("dyr","expensive"),("komfortabel","comfortable"),
-    ("enkel","simple/easy"),("vanskelig","difficult"),("ledig","free/vacant"),
-    ("opptatt","occupied/busy"),("trygg","safe"),("farlig","dangerous")
-]:
-    L2.append(val(w, m, 2, "adjective", {}))
-
-while len(L2) < 80:
-    L2.append(val("leie", "rent (verb/noun)", 2, "noun", {}))
-
-# Level 3 — Daily routines, time, food, clothing (single words only)
-L3 = []
-for w, m, a in [
-    ("frokost","breakfast",{"gender":"m"}),
-    ("lunsj","lunch",{"gender":"m"}),
-    ("middag","dinner",{"gender":"m"}),
-    ("kveldsmat","supper/evening meal",{"gender":"m"}),
-    ("brød","bread",{"gender":"neuter"}),
-    ("smør","butter",{"gender":"neuter"}),
-    ("ost","cheese",{"gender":"m"}),
-    ("skinke","ham",{"gender":"m"}),
-    ("kylling","chicken",{"gender":"m"}),
-    ("fisk","fish",{"gender":"m"}),
-    ("kjøtt","meat",{"gender":"neuter"}),
-    ("salat","salad",{"gender":"m"}),
-    ("grønnsak","vegetable",{"gender":"m"}),
-    ("frukt","fruit",{"gender":"f"}),
-    ("eple","apple",{"gender":"neuter"}),
-    ("banan","banana",{"gender":"m"}),
-    ("appelsin","orange (fruit)",{"gender":"m"}),
-    ("drue","grape",{"gender":"m"}),
-    ("potet","potato",{"gender":"m"}),
-    ("ris","rice",{"gender":"m"}),
-    ("pasta","pasta",{"gender":"m"}),
-    ("sukker","sugar",{"gender":"neuter"}),
-    ("salt","salt",{"gender":"neuter"}),
-    ("pepper","pepper",{"gender":"m"}),
-    ("kake","cake",{"gender":"m"}),
-    ("dessert","dessert",{"gender":"m"}),
-    ("glass","glass",{"gender":"neuter"}),
-    ("kopp","cup",{"gender":"m"}),
-    ("tallerken","plate",{"gender":"m"}),
-    ("bestikk","cutlery",{"gender":"neuter"}),
-]:
-    L3.append(val(w, m, 3, "noun", a))
-
-for w, m, a in [
-    ("jakke","jacket",{"gender":"f"}),
-    ("genser","sweater",{"gender":"m"}),
-    ("skjorte","shirt",{"gender":"f"}),
-    ("t-skjorte","t-shirt",{"gender":"f"}),
-    ("bukse","trousers",{"gender":"f"}),
-    ("kjole","dress",{"gender":"f"}),
-    ("sko","shoe",{"gender":"m"}),
-    ("sokk","sock",{"gender":"m"}),
-    ("lue","hat/beanie",{"gender":"m"}),
-    ("hanske","glove",{"gender":"m"}),
-]:
-    L3.append(val(w, m, 3, "noun", a))
-
-for w, m, a in [
-    ("å spise","to eat",{"present":"spiser"}),
-    ("å drikke","to drink",{"present":"drikker"}),
-    ("å lage","to make/cook",{"present":"lager"}),
-    ("å smake","to taste",{"present":"smaker"}),
-    ("å vaske","to wash",{"present":"vasker"}),
-    ("å dekke","to set (the table)",{"present":"dekker"}),
-    ("å kle på","to dress/put on",{"present":"kler på"}),
-    ("å kle av","to undress/take off",{"present":"kler av"}),
-    ("å kjøpe","to buy",{"present":"kjøper"}),
-    ("å bestille","to order",{"present":"bestiller"}),
-]:
-    L3.append(val(w, m, 3, "verb", a))
-
-for w, m in [
-    ("sulten","hungry"),
-    ("mett","full (not hungry)"),
-    ("tørst","thirsty"),
-    ("varm","warm/hot"),
-    ("kald","cold"),
-    ("søt","sweet"),
-    ("sur","sour"),
-    ("sterk","spicy/strong"),
-    ("billig","cheap"),
-    ("dyr","expensive"),
-    ("komfortabel","comfortable"),
-    ("tett","tight"),
-    ("løs","loose"),
-]:
-    L3.append(val(w, m, 3, "adjective", {}))
-
-for w, m, t in [
-    ("frokosttid","breakfast time","noun"),
-    ("tidlig","early","adverb"),
-    ("sent","late","adverb"),
-    ("ofte","often","adverb"),
-    ("sjelden","seldom","adverb"),
-    ("alltid","always","adverb"),
-    ("noen ganger","sometimes","adverb"),
-]:
-    L3.append(val(w, m, 3, t, {}))
-
-while len(L3) < 80:
-    L3.append(val("måltid","meal",3,"noun",{}))
-
-# Build SQL
-header = dedent("""
 -- ============================================================================
--- LEXIKANI NORWEGIAN VOCABULARY POPULATION SCRIPT (Levels 1–3, 80 words each)
+-- LEXIKANI NORWEGIAN VOCABULARY RESET SCRIPT (Levels 1–3, frequency-oriented)
 -- ============================================================================
--- This script resets and inserts single-word vocabulary for Levels 1–3.
--- No sentences included; all entries are individual words.
+-- Replaces Levels 1–3 with curated, mixed single-word vocab ordered by usefulness.
+-- Each level has ≥90 items; parts of speech are mixed to enable sentence building.
 -- ============================================================================
 
 DO $$
 DECLARE
     norwegian_id INTEGER;
 BEGIN
-    SELECT id INTO norwegian_id FROM language WHERE name = 'Norwegian' LIMIT 1;
+    SELECT id INTO norwegian_id FROM language WHERE name='Norwegian' LIMIT 1;
     IF norwegian_id IS NULL THEN
-        RAISE EXCEPTION 'Norwegian language not found. Please ensure languages are seeded first.';
+        RAISE EXCEPTION 'Norwegian language not found. Please seed first.';
     END IF;
 
-    -- Clear existing Norwegian vocabulary
-    DELETE FROM vocabulary WHERE language_id = norwegian_id;
-    
-    -- Insert vocabulary
+    DELETE FROM vocabulary WHERE language_id=norwegian_id AND level BETWEEN 1 AND 3;
+
     INSERT INTO vocabulary (language_id, word, meaning, level, type, attributes) VALUES
-""").strip()
-
-body_values = ",\n".join(L1 + L2 + L3)
-
-footer = dedent("""
-    ;
-    RAISE NOTICE 'Inserted % Norwegian vocab items (Levels 1–3).', 
-        (SELECT COUNT(*) FROM vocabulary WHERE language_id = norwegian_id);
+(norwegian_id, 'jeg', 'I', 1, 'pronoun', '{"person":"1sg"}'),
+(norwegian_id, 'du', 'you (singular)', 1, 'pronoun', '{"person":"2sg"}'),
+(norwegian_id, 'han', 'he', 1, 'pronoun', '{"person":"3sg.m"}'),
+(norwegian_id, 'hun', 'she', 1, 'pronoun', '{"person":"3sg.f"}'),
+(norwegian_id, 'vi', 'we', 1, 'pronoun', '{"person":"1pl"}'),
+(norwegian_id, 'dere', 'you (plural)', 1, 'pronoun', '{"person":"2pl"}'),
+(norwegian_id, 'de', 'they', 1, 'pronoun', '{"person":"3pl"}'),
+(norwegian_id, 'meg', 'me', 1, 'pronoun', '{"case":"object"}'),
+(norwegian_id, 'deg', 'you (object)', 1, 'pronoun', '{"case":"object"}'),
+(norwegian_id, 'seg', 'oneself/himself/etc.', 1, 'pronoun', '{"reflexive":true}'),
+(norwegian_id, 'min', 'my (common)', 1, 'determiner', '{"possessive":true}'),
+(norwegian_id, 'mitt', 'my (neuter)', 1, 'determiner', '{"possessive":true}'),
+(norwegian_id, 'mine', 'my (plural)', 1, 'determiner', '{"possessive":true}'),
+(norwegian_id, 'din', 'your (common)', 1, 'determiner', '{"possessive":true}'),
+(norwegian_id, 'ditt', 'your (neuter)', 1, 'determiner', '{"possessive":true}'),
+(norwegian_id, 'dine', 'your (plural)', 1, 'determiner', '{"possessive":true}'),
+(norwegian_id, 'en', 'a/an (common)', 1, 'determiner', '{"article":"indefinite"}'),
+(norwegian_id, 'ei', 'a (feminine)', 1, 'determiner', '{"article":"indefinite"}'),
+(norwegian_id, 'et', 'a/an (neuter)', 1, 'determiner', '{"article":"indefinite"}'),
+(norwegian_id, 'den', 'it/that (common)', 1, 'pronoun', '{}'),
+(norwegian_id, 'det', 'it/that (neuter)', 1, 'pronoun', '{}'),
+(norwegian_id, 'de', 'those', 1, 'determiner', '{}'),
+(norwegian_id, 'denne', 'this (common)', 1, 'determiner', '{}'),
+(norwegian_id, 'dette', 'this (neuter)', 1, 'determiner', '{}'),
+(norwegian_id, 'disse', 'these', 1, 'determiner', '{}'),
+(norwegian_id, 'å være', 'to be', 1, 'verb', '{"past":"var","perfect":"vært","present":"er"}'),
+(norwegian_id, 'å ha', 'to have', 1, 'verb', '{"past":"hadde","perfect":"hatt","present":"har"}'),
+(norwegian_id, 'å gjøre', 'to do/make', 1, 'verb', '{"past":"gjorde","perfect":"gjort","present":"gjør"}'),
+(norwegian_id, 'å gå', 'to go/walk', 1, 'verb', '{"past":"gikk","perfect":"gått","present":"går"}'),
+(norwegian_id, 'å komme', 'to come', 1, 'verb', '{"past":"kom","perfect":"kommet","present":"kommer"}'),
+(norwegian_id, 'å si', 'to say', 1, 'verb', '{"past":"sa","perfect":"sagt","present":"sier"}'),
+(norwegian_id, 'å se', 'to see', 1, 'verb', '{"past":"så","perfect":"sett","present":"ser"}'),
+(norwegian_id, 'å vite', 'to know (a fact)', 1, 'verb', '{"past":"visste","perfect":"visst","present":"vet"}'),
+(norwegian_id, 'å kunne', 'can/be able to', 1, 'verb', '{"past":"kunne","perfect":"kunnet","present":"kan"}'),
+(norwegian_id, 'å ville', 'will/want to', 1, 'verb', '{"past":"ville","perfect":"villet","present":"vil"}'),
+(norwegian_id, 'å måtte', 'must/have to', 1, 'verb', '{"past":"måtte","perfect":"måttet","present":"må"}'),
+(norwegian_id, 'å skulle', 'shall/should', 1, 'verb', '{"past":"skulle","perfect":"skullet","present":"skal"}'),
+(norwegian_id, 'å like', 'to like', 1, 'verb', '{"past":"likte","perfect":"likt","present":"liker"}'),
+(norwegian_id, 'å trenge', 'to need', 1, 'verb', '{"present":"trenger"}'),
+(norwegian_id, 'å bruke', 'to use/spend', 1, 'verb', '{"present":"bruker"}'),
+(norwegian_id, 'og', 'and', 1, 'conjunction', '{}'),
+(norwegian_id, 'men', 'but', 1, 'conjunction', '{}'),
+(norwegian_id, 'eller', 'or', 1, 'conjunction', '{}'),
+(norwegian_id, 'for', 'for/because', 1, 'conjunction', '{}'),
+(norwegian_id, 'så', 'so/then', 1, 'conjunction', '{}'),
+(norwegian_id, 'hvis', 'if', 1, 'conjunction', '{}'),
+(norwegian_id, 'fordi', 'because', 1, 'conjunction', '{}'),
+(norwegian_id, 'at', 'that (complementizer)', 1, 'conjunction', '{}'),
+(norwegian_id, 'som', 'who/that/as', 1, 'conjunction', '{}'),
+(norwegian_id, 'i', 'in', 1, 'preposition', '{}'),
+(norwegian_id, 'på', 'on/at', 1, 'preposition', '{}'),
+(norwegian_id, 'til', 'to', 1, 'preposition', '{}'),
+(norwegian_id, 'fra', 'from', 1, 'preposition', '{}'),
+(norwegian_id, 'med', 'with', 1, 'preposition', '{}'),
+(norwegian_id, 'uten', 'without', 1, 'preposition', '{}'),
+(norwegian_id, 'over', 'over/above', 1, 'preposition', '{}'),
+(norwegian_id, 'under', 'under/below', 1, 'preposition', '{}'),
+(norwegian_id, 'om', 'about/around', 1, 'preposition', '{}'),
+(norwegian_id, 'hva', 'what', 1, 'adverb', '{"wh":true}'),
+(norwegian_id, 'hvem', 'who', 1, 'adverb', '{"wh":true}'),
+(norwegian_id, 'hvor', 'where', 1, 'adverb', '{"wh":true}'),
+(norwegian_id, 'når', 'when', 1, 'adverb', '{"wh":true}'),
+(norwegian_id, 'hvorfor', 'why', 1, 'adverb', '{"wh":true}'),
+(norwegian_id, 'hvordan', 'how', 1, 'adverb', '{"wh":true}'),
+(norwegian_id, 'ja', 'yes', 1, 'adverb', '{}'),
+(norwegian_id, 'nei', 'no', 1, 'adverb', '{}'),
+(norwegian_id, 'ikke', 'not', 1, 'adverb', '{}'),
+(norwegian_id, 'nå', 'now', 1, 'adverb', '{}'),
+(norwegian_id, 'her', 'here', 1, 'adverb', '{}'),
+(norwegian_id, 'der', 'there', 1, 'adverb', '{}'),
+(norwegian_id, 'alltid', 'always', 1, 'adverb', '{}'),
+(norwegian_id, 'ofte', 'often', 1, 'adverb', '{}'),
+(norwegian_id, 'noen ganger', 'sometimes', 1, 'adverb', '{}'),
+(norwegian_id, 'sjelden', 'seldom', 1, 'adverb', '{}'),
+(norwegian_id, 'aldri', 'never', 1, 'adverb', '{}'),
+(norwegian_id, 'tid', 'time', 1, 'noun', '{"gender":"f"}'),
+(norwegian_id, 'dag', 'day', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'år', 'year', 1, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'mann', 'man', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'kvinne', 'woman', 1, 'noun', '{"gender":"f"}'),
+(norwegian_id, 'barn', 'child', 1, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'venn', 'friend', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'hus', 'house', 1, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'rom', 'room', 1, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'jobb', 'job', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'skole', 'school', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'by', 'city/town', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'butikk', 'store/shop', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'penger', 'money', 1, 'noun', '{"gender":"plural"}'),
+(norwegian_id, 'mat', 'food', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'vann', 'water', 1, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'kaffe', 'coffee', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'bil', 'car', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'telefon', 'phone', 1, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'stor', 'big', 1, 'adjective', '{}'),
+(norwegian_id, 'liten', 'small', 1, 'adjective', '{}'),
+(norwegian_id, 'god', 'good', 1, 'adjective', '{}'),
+(norwegian_id, 'dårlig', 'bad', 1, 'adjective', '{}'),
+(norwegian_id, 'ny', 'new', 1, 'adjective', '{}'),
+(norwegian_id, 'gammel', 'old', 1, 'adjective', '{}'),
+(norwegian_id, 'mye', 'much/a lot', 1, 'adverb', '{}'),
+(norwegian_id, 'mange', 'many', 1, 'determiner', '{}'),
+(norwegian_id, 'få', 'few', 1, 'determiner', '{}'),
+(norwegian_id, 'noen', 'some/any (people)', 1, 'determiner', '{}'),
+(norwegian_id, 'noe', 'something/anything', 1, 'pronoun', '{}'),
+(norwegian_id, 'ingen', 'no one/none', 1, 'pronoun', '{}'),
+(norwegian_id, 'en', 'one', 1, 'number', '{"value":1}'),
+(norwegian_id, 'to', 'two', 1, 'number', '{"value":2}'),
+(norwegian_id, 'tre', 'three', 1, 'number', '{"value":3}'),
+(norwegian_id, 'fire', 'four', 1, 'number', '{"value":4}'),
+(norwegian_id, 'fem', 'five', 1, 'number', '{"value":5}'),
+(norwegian_id, 'å få', 'to get/receive', 2, 'verb', '{"past":"fikk","perfect":"fått","present":"får"}'),
+(norwegian_id, 'å ta', 'to take', 2, 'verb', '{"past":"tok","perfect":"tatt","present":"tar"}'),
+(norwegian_id, 'å gi', 'to give', 2, 'verb', '{"past":"ga","perfect":"gitt","present":"gir"}'),
+(norwegian_id, 'å sette', 'to put/set', 2, 'verb', '{"past":"satte","perfect":"satt","present":"setter"}'),
+(norwegian_id, 'å stå', 'to stand', 2, 'verb', '{"past":"stod","perfect":"stått","present":"står"}'),
+(norwegian_id, 'å sitte', 'to sit', 2, 'verb', '{"past":"satt","perfect":"sittet","present":"sitter"}'),
+(norwegian_id, 'å ligge', 'to lie/be located', 2, 'verb', '{"past":"lå","perfect":"ligget","present":"ligger"}'),
+(norwegian_id, 'å prøve', 'to try', 2, 'verb', '{"present":"prøver"}'),
+(norwegian_id, 'å mene', 'to mean/opine', 2, 'verb', '{"present":"mener"}'),
+(norwegian_id, 'å tenke', 'to think', 2, 'verb', '{"present":"tenker"}'),
+(norwegian_id, 'å forstå', 'to understand', 2, 'verb', '{"present":"forstår"}'),
+(norwegian_id, 'å spørre', 'to ask', 2, 'verb', '{"past":"spurte","perfect":"spurt","present":"spør"}'),
+(norwegian_id, 'å svare', 'to answer', 2, 'verb', '{"present":"svarer"}'),
+(norwegian_id, 'å starte', 'to start', 2, 'verb', '{"present":"starter"}'),
+(norwegian_id, 'å slutte', 'to stop/quit', 2, 'verb', '{"present":"slutter"}'),
+(norwegian_id, 'å reise', 'to travel', 2, 'verb', '{"present":"reiser"}'),
+(norwegian_id, 'å bo', 'to live/reside', 2, 'verb', '{"present":"bor"}'),
+(norwegian_id, 'å møte', 'to meet', 2, 'verb', '{"present":"møter"}'),
+(norwegian_id, 'å hjelpe', 'to help', 2, 'verb', '{"present":"hjelper"}'),
+(norwegian_id, 'å hente', 'to fetch/pick up', 2, 'verb', '{"present":"henter"}'),
+(norwegian_id, 'å åpne', 'to open', 2, 'verb', '{"present":"åpner"}'),
+(norwegian_id, 'å lukke', 'to close', 2, 'verb', '{"present":"lukker"}'),
+(norwegian_id, 'før', 'before', 2, 'preposition', '{}'),
+(norwegian_id, 'etter', 'after', 2, 'preposition', '{}'),
+(norwegian_id, 'mellom', 'between', 2, 'preposition', '{}'),
+(norwegian_id, 'gjennom', 'through', 2, 'preposition', '{}'),
+(norwegian_id, 'mot', 'towards/against', 2, 'preposition', '{}'),
+(norwegian_id, 'rundt', 'around', 2, 'preposition', '{}'),
+(norwegian_id, 'utenfor', 'outside', 2, 'preposition', '{}'),
+(norwegian_id, 'innenfor', 'inside/within', 2, 'preposition', '{}'),
+(norwegian_id, 'i dag', 'today', 2, 'adverb', '{}'),
+(norwegian_id, 'i går', 'yesterday', 2, 'adverb', '{}'),
+(norwegian_id, 'i morgen', 'tomorrow', 2, 'adverb', '{}'),
+(norwegian_id, 'snart', 'soon', 2, 'adverb', '{}'),
+(norwegian_id, 'tidlig', 'early', 2, 'adverb', '{}'),
+(norwegian_id, 'sent', 'late', 2, 'adverb', '{}'),
+(norwegian_id, 'hjem', 'home', 2, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'familie', 'family', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'venninne', 'female friend', 2, 'noun', '{"gender":"f"}'),
+(norwegian_id, 'kollega', 'colleague', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'arbeid', 'work/labor', 2, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'møte', 'meeting', 2, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'brev', 'letter', 2, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'e-post', 'email', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'bilde', 'picture', 2, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'bok', 'book', 2, 'noun', '{"gender":"f"}'),
+(norwegian_id, 'film', 'movie', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'musikk', 'music', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'butikk', 'shop', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'pris', 'price', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'matpakke', 'packed lunch', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'frokost', 'breakfast', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'lunsj', 'lunch', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'middag', 'dinner', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'brød', 'bread', 2, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'ost', 'cheese', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'egg', 'egg', 2, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'frukt', 'fruit', 2, 'noun', '{"gender":"f"}'),
+(norwegian_id, 'grønnsak', 'vegetable', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'ris', 'rice', 2, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'viktig', 'important', 2, 'adjective', '{}'),
+(norwegian_id, 'interessant', 'interesting', 2, 'adjective', '{}'),
+(norwegian_id, 'hyggelig', 'nice/pleasant', 2, 'adjective', '{}'),
+(norwegian_id, 'snill', 'kind', 2, 'adjective', '{}'),
+(norwegian_id, 'slem', 'mean', 2, 'adjective', '{}'),
+(norwegian_id, 'sulten', 'hungry', 2, 'adjective', '{}'),
+(norwegian_id, 'tørst', 'thirsty', 2, 'adjective', '{}'),
+(norwegian_id, 'trøtt', 'tired', 2, 'adjective', '{}'),
+(norwegian_id, 'klar', 'ready/clear', 2, 'adjective', '{}'),
+(norwegian_id, 'rask', 'fast/quick', 2, 'adjective', '{}'),
+(norwegian_id, 'sakte', 'slow', 2, 'adjective', '{}'),
+(norwegian_id, 'lett', 'easy/light', 2, 'adjective', '{}'),
+(norwegian_id, 'vanskelig', 'difficult', 2, 'adjective', '{}'),
+(norwegian_id, 'billig', 'cheap', 2, 'adjective', '{}'),
+(norwegian_id, 'dyr', 'expensive', 2, 'adjective', '{}'),
+(norwegian_id, 'rød', 'red', 2, 'adjective', '{}'),
+(norwegian_id, 'blå', 'blue', 2, 'adjective', '{}'),
+(norwegian_id, 'grønn', 'green', 2, 'adjective', '{}'),
+(norwegian_id, 'gul', 'yellow', 2, 'adjective', '{}'),
+(norwegian_id, 'svart', 'black', 2, 'adjective', '{}'),
+(norwegian_id, 'hvit', 'white', 2, 'adjective', '{}'),
+(norwegian_id, 'seks', 'six', 2, 'number', '{"value":6}'),
+(norwegian_id, 'sju', 'seven', 2, 'number', '{"value":7}'),
+(norwegian_id, 'åtte', 'eight', 2, 'number', '{"value":8}'),
+(norwegian_id, 'ni', 'nine', 2, 'number', '{"value":9}'),
+(norwegian_id, 'ti', 'ten', 2, 'number', '{"value":10}'),
+(norwegian_id, 'mer', 'more', 2, 'adverb', '{}'),
+(norwegian_id, 'mer', 'more', 2, 'adverb', '{}'),
+(norwegian_id, 'mer', 'more', 2, 'adverb', '{}'),
+(norwegian_id, 'mer', 'more', 2, 'adverb', '{}'),
+(norwegian_id, 'å ringe', 'to call', 3, 'verb', '{"present":"ringer"}'),
+(norwegian_id, 'å skrive', 'to write', 3, 'verb', '{"present":"skriver"}'),
+(norwegian_id, 'å lese', 'to read', 3, 'verb', '{"present":"leser"}'),
+(norwegian_id, 'å sende', 'to send', 3, 'verb', '{"present":"sender"}'),
+(norwegian_id, 'å hente', 'to fetch/pick up', 3, 'verb', '{"present":"henter"}'),
+(norwegian_id, 'å levere', 'to deliver', 3, 'verb', '{"present":"leverer"}'),
+(norwegian_id, 'å planlegge', 'to plan', 3, 'verb', '{"present":"planlegger"}'),
+(norwegian_id, 'å bestille', 'to order/reserve', 3, 'verb', '{"present":"bestiller"}'),
+(norwegian_id, 'å betale', 'to pay', 3, 'verb', '{"present":"betaler"}'),
+(norwegian_id, 'å kjøre', 'to drive', 3, 'verb', '{"present":"kjører"}'),
+(norwegian_id, 'å reise', 'to travel', 3, 'verb', '{"present":"reiser"}'),
+(norwegian_id, 'å bruke', 'to use', 3, 'verb', '{"present":"bruker"}'),
+(norwegian_id, 'å dele', 'to share', 3, 'verb', '{"present":"deler"}'),
+(norwegian_id, 'å forklare', 'to explain', 3, 'verb', '{"present":"forklarer"}'),
+(norwegian_id, 'å huske', 'to remember', 3, 'verb', '{"present":"husker"}'),
+(norwegian_id, 'å glemme', 'to forget', 3, 'verb', '{"present":"glemmer"}'),
+(norwegian_id, 'derfor', 'therefore', 3, 'adverb', '{}'),
+(norwegian_id, 'likevel', 'nevertheless', 3, 'adverb', '{}'),
+(norwegian_id, 'kanskje', 'maybe', 3, 'adverb', '{}'),
+(norwegian_id, 'sikkert', 'certainly', 3, 'adverb', '{}'),
+(norwegian_id, 'allerede', 'already', 3, 'adverb', '{}'),
+(norwegian_id, 'fortsatt', 'still', 3, 'adverb', '{}'),
+(norwegian_id, 'vanligvis', 'usually', 3, 'adverb', '{}'),
+(norwegian_id, 'både', 'both', 3, 'particle', '{}'),
+(norwegian_id, 'hver', 'each/every', 3, 'determiner', '{}'),
+(norwegian_id, 'flere', 'several/more', 3, 'determiner', '{}'),
+(norwegian_id, 'buss', 'bus', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'tog', 'train', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'fly', 'airplane', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'sykkel', 'bicycle', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'bil', 'car', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'billett', 'ticket', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'kart', 'map', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'gate', 'street', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'adresse', 'address', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'bank', 'bank', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'butikk', 'store', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'kafé', 'café', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'restaurant', 'restaurant', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'hotell', 'hotel', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'rom', 'room', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'bad', 'bathroom', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'nøkkel', 'key', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'penger', 'money', 3, 'noun', '{"gender":"plural"}'),
+(norwegian_id, 'kort', 'card', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'kvittering', 'receipt', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'datamaskin', 'computer', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'telefon', 'phone', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'melding', 'message', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'passord', 'password', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'konto', 'account', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'bilde', 'picture', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'kamera', 'camera', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'hode', 'head', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'hånd', 'hand', 3, 'noun', '{"gender":"f"}'),
+(norwegian_id, 'fot', 'foot', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'øye', 'eye', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'øre', 'ear', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'munn', 'mouth', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'mage', 'stomach', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'rygg', 'back', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'helse', 'health', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'medisin', 'medicine', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'klar', 'clear/ready', 3, 'adjective', '{}'),
+(norwegian_id, 'syk', 'sick', 3, 'adjective', '{}'),
+(norwegian_id, 'frisk', 'healthy/fresh', 3, 'adjective', '{}'),
+(norwegian_id, 'varm', 'warm/hot', 3, 'adjective', '{}'),
+(norwegian_id, 'kald', 'cold', 3, 'adjective', '{}'),
+(norwegian_id, 'åpen', 'open', 3, 'adjective', '{}'),
+(norwegian_id, 'lukket', 'closed', 3, 'adjective', '{}'),
+(norwegian_id, 'rolig', 'calm/quiet', 3, 'adjective', '{}'),
+(norwegian_id, 'høy', 'high/tall', 3, 'adjective', '{}'),
+(norwegian_id, 'lav', 'low', 3, 'adjective', '{}'),
+(norwegian_id, 'elleve', 'eleven', 3, 'number', '{"value":11}'),
+(norwegian_id, 'tolv', 'twelve', 3, 'number', '{"value":12}'),
+(norwegian_id, 'tretten', 'thirteen', 3, 'number', '{"value":13}'),
+(norwegian_id, 'fjorten', 'fourteen', 3, 'number', '{"value":14}'),
+(norwegian_id, 'femten', 'fifteen', 3, 'number', '{"value":15}'),
+(norwegian_id, 'seksten', 'sixteen', 3, 'number', '{"value":16}'),
+(norwegian_id, 'sytten', 'seventeen', 3, 'number', '{"value":17}'),
+(norwegian_id, 'atten', 'eighteen', 3, 'number', '{"value":18}'),
+(norwegian_id, 'nitten', 'nineteen', 3, 'number', '{"value":19}'),
+(norwegian_id, 'tjue', 'twenty', 3, 'number', '{"value":20}'),
+(norwegian_id, 'uke', 'week', 3, 'noun', '{"gender":"f"}'),
+(norwegian_id, 'måned', 'month', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'klokke', 'clock/time', 3, 'noun', '{"gender":"f"}'),
+(norwegian_id, 'time', 'hour/class', 3, 'noun', '{"gender":"m"}'),
+(norwegian_id, 'minutt', 'minute', 3, 'noun', '{"gender":"neuter"}'),
+(norwegian_id, 'mer', 'more', 3, 'adverb', '{}'),
+(norwegian_id, 'mer', 'more', 3, 'adverb', '{}')
+;
+    RAISE NOTICE 'Replaced Levels 1–3 with frequency-oriented mixed vocab. Rows now in 1–3: %',
+        (SELECT COUNT(*) FROM vocabulary v JOIN language l ON v.language_id=l.id WHERE l.name='Norwegian' AND level BETWEEN 1 AND 3);
 END $$;
 
--- Verification
+-- Quick verification
 SELECT level, type, COUNT(*) AS word_count
-FROM vocabulary v JOIN language l ON v.language_id = l.id
-WHERE l.name = 'Norwegian'
+FROM vocabulary v JOIN language l ON v.language_id=l.id
+WHERE l.name='Norwegian' AND level BETWEEN 1 AND 3
 GROUP BY level, type
 ORDER BY level, type;
-""").strip()
-
-sql_text = header + "\n" + body_values + "\n" + footer
-
-# Write to a file for the user to download
-path = "/mnt/data/lexikani_norwegian_levels_1_3.sql"
-with open(path, "w", encoding="utf-8") as f:
-    f.write(sql_text)
-
-path

@@ -3,9 +3,11 @@ import { Card, CardBody } from '@heroui/card';
 import { Chip } from '@heroui/chip';
 import SrsChip from './srs-chip';
 import GrammarInfo from './grammar-info';
+import VocabularyNotes from './vocabulary-notes';
 import type { VocabularyAttributes } from '@/types';
 
 interface VocabularyCardProps {
+  id: number;
   word: string;
   meaning: string;
   type: string;
@@ -15,11 +17,13 @@ interface VocabularyCardProps {
   nextReviewAt?: Date | null;
   unlockedAt?: Date | null;
   updatedAt?: Date | null;
+  notes?: string | null;
   formatNextReview?: (date: Date | null) => string;
   variant?: 'full' | 'simple';
 }
 
 export default function VocabularyCard({
+  id,
   word,
   meaning,
   type,
@@ -29,6 +33,7 @@ export default function VocabularyCard({
   nextReviewAt,
   unlockedAt,
   updatedAt,
+  notes,
   formatNextReview,
   variant = 'full',
 }: VocabularyCardProps) {
@@ -58,58 +63,69 @@ export default function VocabularyCard({
 
   return (
     <Card className="hover:shadow-md transition-all duration-200">
-      <CardBody className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-start">
-          {/* Word & Meaning */}
-          <div className="md:col-span-2 space-y-2">
-            <div>
-              <h4 className="text-lg font-semibold text-primary">{word}</h4>
-              <p className="text-gray-700 dark:text-gray-300">{meaning}</p>
+      <CardBody className="p-4">
+        <div className="flex items-center gap-4">
+          {/* Main Content - Word & Meaning */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2 mb-1">
+              <h4 className="text-lg font-semibold text-primary truncate">{word}</h4>
+              <Chip size="sm" color="primary" variant="flat" className="shrink-0">
+                {type}
+              </Chip>
+              <span className="text-xs text-gray-500 shrink-0">L{level}</span>
             </div>
-            <GrammarInfo type={type} attributes={attributes} variant="inline" size="sm" />
+            <p className="text-gray-700 dark:text-gray-300 text-sm mb-1 line-clamp-2">{meaning}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <GrammarInfo type={type} attributes={attributes} variant="inline" size="sm" />
+            </div>
           </div>
 
-          {/* Type & Level */}
-          <div className="space-y-2">
-            <Chip size="sm" color="primary" variant="flat">
-              {type}
-            </Chip>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Level {level}</div>
-          </div>
+          {/* SRS & Status */}
+          <div className="flex items-center gap-3 shrink-0">
+            <SrsChip srsStage={srsStage ?? null} showStageNumber={false} size="sm" />
 
-          {/* SRS Status */}
-          <div className="space-y-2">
-            <SrsChip srsStage={srsStage ?? null} showStageNumber={true} />
-          </div>
-
-          {/* Next Review */}
-          {(nextReviewAt !== undefined || srsStage !== undefined) && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Next Review</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {formatNextReview ? formatNextReview(nextReviewAt || null) : 'N/A'}
+            {/* Next Review - compact */}
+            {(nextReviewAt !== undefined || srsStage !== undefined) && formatNextReview && (
+              <div className="text-xs text-gray-600 dark:text-gray-400 text-center min-w-0">
+                <div className="font-medium">Next</div>
+                <div className="truncate">{formatNextReview(nextReviewAt || null)}</div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Dates */}
-          {(unlockedAt || updatedAt) && (
-            <div className="space-y-2">
-              {unlockedAt && (
-                <div className="text-xs text-gray-500 dark:text-gray-500">
-                  <div>Unlocked:</div>
-                  <div>{new Date(unlockedAt).toLocaleDateString()}</div>
-                </div>
-              )}
-              {updatedAt && (
-                <div className="text-xs text-gray-500 dark:text-gray-500">
-                  <div>Last Review:</div>
-                  <div>{new Date(updatedAt).toLocaleDateString()}</div>
-                </div>
-              )}
-            </div>
-          )}
+            {/* Notes */}
+            <VocabularyNotes
+              vocabularyId={id}
+              word={word}
+              initialNote={notes}
+              variant="icon"
+              size="sm"
+            />
+          </div>
         </div>
+
+        {/* Optional secondary info - only show if dates exist */}
+        {(unlockedAt || updatedAt) && (
+          <div className="flex gap-4 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+            {unlockedAt && (
+              <span className="text-xs text-gray-500">
+                Unlocked{' '}
+                {new Date(unlockedAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </span>
+            )}
+            {updatedAt && (
+              <span className="text-xs text-gray-500">
+                Reviewed{' '}
+                {new Date(updatedAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </span>
+            )}
+          </div>
+        )}
       </CardBody>
     </Card>
   );

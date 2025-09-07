@@ -67,23 +67,14 @@ export default function QuestionCard({
         } else if (showResult && allowEnterNext) {
           onNext();
         }
-      } else if ((e.key === ' ' || e.key === 'Tab') && showResult && !isCorrect && onShowDetails) {
-        // Show details on Space or Tab when answer is wrong
+      } else if ((e.key === ' ' || e.key === 'Tab') && showResult && onShowDetails) {
+        // Toggle details on Space or Tab regardless of correctness
         e.preventDefault();
-        setShowDetails(true);
+        setShowDetails(prev => !prev);
         onShowDetails();
       }
     },
-    [
-      showResult,
-      userInput,
-      allowEnterSubmit,
-      allowEnterNext,
-      onSubmit,
-      onNext,
-      isCorrect,
-      onShowDetails,
-    ],
+    [showResult, userInput, allowEnterSubmit, allowEnterNext, onSubmit, onNext, onShowDetails],
   );
 
   // Focus input and setup keyboard listeners
@@ -173,6 +164,28 @@ export default function QuestionCard({
                   <SparklesIcon className="w-5 h-5" />
                   <p className="font-medium">Correct!</p>
                 </div>
+
+                {!showDetails && onShowDetails && (
+                  <div className="mt-3 space-y-2">
+                    <Button
+                      size="sm"
+                      color="success"
+                      variant="light"
+                      onPress={() => {
+                        setShowDetails(prev => !prev);
+                        onShowDetails();
+                      }}
+                    >
+                      View Word Details
+                    </Button>
+                    <p className="text-xs opacity-75">
+                      Or press{' '}
+                      <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Space</kbd>{' '}
+                      to toggle details
+                    </p>
+                  </div>
+                )}
+
                 <p className="text-xs mt-2 opacity-75">
                   Press{' '}
                   <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Enter</kbd> to
@@ -198,7 +211,7 @@ export default function QuestionCard({
                       color="primary"
                       variant="light"
                       onPress={() => {
-                        setShowDetails(true);
+                        setShowDetails(prev => !prev);
                         onShowDetails();
                       }}
                     >
@@ -207,7 +220,7 @@ export default function QuestionCard({
                     <p className="text-xs opacity-75">
                       Or press{' '}
                       <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Space</kbd>{' '}
-                      to see details
+                      to toggle details
                     </p>
                   </div>
                 )}

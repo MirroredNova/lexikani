@@ -13,7 +13,8 @@ interface ReviewScheduleProps {
 }
 
 export default function ReviewSchedule({ schedule }: ReviewScheduleProps) {
-  const maxCount = Math.max(...schedule.map(item => item.count));
+  // Handle empty schedule gracefully
+  const maxCount = schedule.length > 0 ? Math.max(...schedule.map(item => item.count)) : 0;
 
   const totalReviews = schedule.reduce((sum, item) => sum + item.count, 0);
 

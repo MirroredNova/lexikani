@@ -3,8 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@heroui/button';
 import type { VocabularyItem, QuizQuestion } from '@/types';
-import { ProgressBar, QuestionCard, VocabularyCard } from '@/components/shared';
-import { fuzzyMatchText, generateQuizQuestions, calculateProgress } from '@/lib/utils';
+import { ProgressBar, QuestionCard, VocabularyCard, VocabularyNotes } from '@/components/shared';
+import {
+  fuzzyMatchText,
+  generateQuizQuestions,
+  calculateProgress,
+  generateAcceptableAnswers,
+} from '@/lib/utils';
 
 interface QuizSectionProps {
   words: VocabularyItem[];
@@ -68,10 +73,12 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
       setCurrentQuestionIndex(prev => prev + 1);
       setUserInput('');
       setShowResult(false);
-    } else if (isRetestPhase && retestWrongAnswers.length > 0) {
+    } else if (retestWrongAnswers.length > 0) {
       // Continue retest phase - add remaining wrong retest answers back to the queue
+      // Keep retesting until all questions are answered correctly
       setQuestions(prev => [...prev, ...retestWrongAnswers]);
       setRetestWrongAnswers([]);
+      setIsRetestPhase(true); // Ensure we stay in retest mode
       setCurrentQuestionIndex(prev => prev + 1);
       setUserInput('');
       setShowResult(false);
@@ -108,7 +115,7 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
   }, [canUndo, lastAnswer]);
 
   const handleShowDetails = useCallback(() => {
-    setShowWordDetails(true);
+    setShowWordDetails(prev => !prev);
   }, []);
 
   const handleSubmitAnswer = () => {
@@ -123,7 +130,20 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
       retestWrongAnswers: [...retestWrongAnswers],
     };
 
-    const isCorrect = fuzzyMatchText(userInput, currentQuestion.correctAnswer);
+    // Get acceptable answers - only use for word-to-meaning direction
+    let acceptableAnswers: string[] | undefined;
+
+    if (currentQuestion.direction === 'word-to-meaning') {
+      // User types English meaning - use stored alternatives or generate from meaning
+      acceptableAnswers =
+        currentQuestion.word.acceptedAnswers ||
+        generateAcceptableAnswers(currentQuestion.correctAnswer);
+    } else {
+      // User types Norwegian word - don't use alternatives (Norwegian should be exact)
+      acceptableAnswers = undefined;
+    }
+
+    const isCorrect = fuzzyMatchText(userInput, currentQuestion.correctAnswer, acceptableAnswers);
     currentState.wasCorrect = isCorrect;
 
     if (isCorrect) {
@@ -213,7 +233,7 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
         onSubmit={handleSubmitAnswer}
         onNext={handleNextQuestion}
         showResult={showResult}
-        isCorrect={fuzzyMatchText(userInput, currentQuestion.correctAnswer)}
+        isCorrect={showResult ? (lastAnswer?.wasCorrect ?? false) : false}
         correctAnswer={currentQuestion.correctAnswer}
         showRetestIndicator={isRetestPhase}
         wordData={{
@@ -228,11 +248,12 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
           showResult && (
             <>
               {showWordDetails && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-4">
                   <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-3">
                     Word Details
                   </h4>
                   <VocabularyCard
+                    id={currentQuestion.word.id}
                     word={currentQuestion.word.word}
                     meaning={currentQuestion.word.meaning}
                     type={currentQuestion.word.type}
@@ -240,6 +261,14 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
                     attributes={currentQuestion.word.attributes}
                     variant="simple"
                   />
+                  <div className="flex justify-center pt-2">
+                    <VocabularyNotes
+                      vocabularyId={currentQuestion.word.id}
+                      word={currentQuestion.word.word}
+                      variant="button"
+                      size="sm"
+                    />
+                  </div>
                 </div>
               )}
               {!fuzzyMatchText(userInput, currentQuestion.correctAnswer) && !isRetestPhase && (

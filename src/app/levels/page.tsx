@@ -47,7 +47,7 @@ export default async function LevelsPage() {
           </h2>
           <div className="flex items-center justify-center gap-4 text-sm text-gray-600 dark:text-gray-400">
             <span>
-              {levelProgress.masteredWords} / {levelProgress.totalWords} words mastered
+              {levelProgress.masteredWords} / {levelProgress.totalWords} words mastered (Guru+)
             </span>
             <span>•</span>
             <span>{levelProgress.progressPercentage}% complete</span>
