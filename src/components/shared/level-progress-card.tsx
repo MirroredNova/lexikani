@@ -20,36 +20,68 @@ export default function LevelProgressCard({
   showUnlockMessage = false,
   isCompleted = false,
 }: LevelProgressCardProps) {
+  const gradientClass = isCompleted
+    ? 'bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-800/30 border-green-200 dark:border-green-800'
+    : 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-800/30 border-blue-200 dark:border-blue-800';
+
   return (
-    <Card className="mb-6 hover:shadow-md transition-all duration-200">
+    <Card className={`mb-6 hover:shadow-md transition-all duration-200 ${gradientClass}`}>
       <CardBody className="text-center p-6">
         <div className="flex items-center justify-center gap-4 mb-4">
-          <Chip size="lg" color="primary" variant="flat">
-            Level {currentLevel}
-          </Chip>
-          <span className={`text-2xl font-bold ${isCompleted ? 'text-success' : 'text-warning'}`}>
-            {progressPercentage}% Complete
-          </span>
+          <div className={`p-2 rounded-lg ${isCompleted ? 'bg-green-500' : 'bg-blue-500'}`}>
+            <SparklesIcon className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <Chip
+              size="lg"
+              color={isCompleted ? 'success' : 'primary'}
+              variant="flat"
+              className="font-bold"
+            >
+              Level {currentLevel}
+            </Chip>
+          </div>
         </div>
-        <p className="text-gray-600 dark:text-gray-400">
+
+        <p
+          className={`text-2xl font-bold mb-2 ${
+            isCompleted ? 'text-green-700 dark:text-green-300' : 'text-blue-700 dark:text-blue-300'
+          }`}
+        >
+          {progressPercentage}% Complete
+        </p>
+
+        <p
+          className={`text-sm mb-4 ${
+            isCompleted ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'
+          }`}
+        >
           {masteredWords} of {totalWords} words mastered (Guru level or higher)
         </p>
+
         {totalWords > 0 && (
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-4">
+          <div
+            className={`w-full rounded-full h-3 max-w-md mx-auto ${
+              isCompleted ? 'bg-green-200 dark:bg-green-800' : 'bg-blue-200 dark:bg-blue-800'
+            }`}
+          >
             <div
-              className={`h-2 rounded-full transition-all duration-300 ${
-                isCompleted ? 'bg-success' : 'bg-warning'
+              className={`h-3 rounded-full transition-all duration-300 ${
+                isCompleted
+                  ? 'bg-gradient-to-r from-green-500 to-green-600'
+                  : 'bg-gradient-to-r from-blue-500 to-blue-600'
               }`}
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
         )}
+
         {showUnlockMessage && (
           <p
-            className={`font-medium mt-2 ${
+            className={`font-medium mt-4 ${
               isCompleted
-                ? 'text-green-600 dark:text-green-400'
-                : 'text-blue-600 dark:text-blue-400'
+                ? 'text-green-700 dark:text-green-300'
+                : 'text-blue-700 dark:text-blue-300'
             }`}
           >
             {isCompleted ? (

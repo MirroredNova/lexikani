@@ -26,29 +26,46 @@ export default function VocabularyNotes({
 }: VocabularyNotesProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [note, setNote] = useState(initialNote || '');
+  const [optimisticNote, setOptimisticNote] = useState(initialNote || '');
   const [isPending, startTransition] = useTransition();
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const router = useRouter();
 
-  const hasNote = Boolean(initialNote?.trim());
+  // Use optimistic note for display
+  const hasNote = Boolean(optimisticNote?.trim());
 
   const handleSave = () => {
+    // Optimistic update - immediately update the UI
+    const newNote = note.trim();
+    setOptimisticNote(newNote);
+    setSaveStatus('saving');
+
     startTransition(async () => {
       try {
-        const result = await updateVocabularyNote(vocabularyId, note);
+        const result = await updateVocabularyNote(vocabularyId, newNote);
         if (result.success) {
+          setSaveStatus('saved');
           setIsOpen(false);
+          // Only refresh if we need to sync other data
           router.refresh();
         } else {
+          // Revert optimistic update on error
+          setOptimisticNote(initialNote || '');
+          setSaveStatus('error');
           console.error('Failed to save note:', result.error);
         }
       } catch (error) {
+        // Revert optimistic update on error
+        setOptimisticNote(initialNote || '');
+        setSaveStatus('error');
         console.error('Error saving note:', error);
       }
     });
   };
 
   const handleOpen = () => {
-    setNote(initialNote || '');
+    setNote(optimisticNote || '');
+    setSaveStatus('idle');
     setIsOpen(true);
   };
 
@@ -134,9 +151,21 @@ export default function VocabularyNotes({
                 <Button variant="light" onPress={onClose} disabled={isPending}>
                   Cancel
                 </Button>
-                <Button color="primary" onPress={handleSave} isLoading={isPending}>
-                  {isPending ? 'Saving...' : 'Save Note'}
+                <Button
+                  color="primary"
+                  onPress={handleSave}
+                  isLoading={isPending}
+                  isDisabled={!note.trim()}
+                >
+                  {saveStatus === 'saving'
+                    ? 'Saving...'
+                    : saveStatus === 'saved'
+                      ? 'Saved!'
+                      : 'Save Note'}
                 </Button>
+                {saveStatus === 'error' && (
+                  <p className="text-xs text-danger">Failed to save. Please try again.</p>
+                )}
               </ModalFooter>
             </>
           )}

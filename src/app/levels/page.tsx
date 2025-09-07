@@ -2,6 +2,8 @@ import { getUserSelectedLanguage } from '@/lib/server/user.actions';
 import { getLevelProgress, getVocabularyByLevel } from '@/lib/server/vocabulary.actions';
 
 import { LevelAccordion } from '@/components/shared';
+import { Card, CardBody } from '@heroui/card';
+import { SparklesIcon } from '@heroicons/react/24/outline';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -32,28 +34,50 @@ export default async function LevelsPage() {
 
   return (
     <div className="container mx-auto max-w-6xl p-6 mb-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Levels - {selectedLanguage.name}</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Track your progression through {selectedLanguage.name} vocabulary levels.
-        </p>
+      {/* Header */}
+      <div className="text-center space-y-4 mb-8">
+        <div className="flex items-center justify-center gap-3">
+          <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full">
+            <SparklesIcon className="w-8 h-8 text-white" />
+          </div>
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Learning Levels</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Track your progression through {selectedLanguage.name} vocabulary levels
+          </p>
+        </div>
       </div>
 
       {/* Current Level Progress Overview */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-8">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">
-            Level {levelProgress.currentLevel} Progress
-          </h2>
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-            <span>
-              {levelProgress.masteredWords} / {levelProgress.totalWords} words mastered (Guru+)
-            </span>
-            <span>•</span>
-            <span>{levelProgress.progressPercentage}% complete</span>
+      <Card className="mb-8 bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-purple-900/20 dark:to-indigo-800/30 border-purple-200 dark:border-purple-800">
+        <CardBody className="p-6 text-center">
+          <div className="flex items-center justify-center gap-4 mb-3">
+            <div className="p-2 bg-purple-500 rounded-lg">
+              <SparklesIcon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-purple-900 dark:text-purple-100">
+                Level {levelProgress.currentLevel} Progress
+              </h2>
+            </div>
           </div>
-        </div>
-      </div>
+          <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 mb-2">
+            {levelProgress.progressPercentage}% Complete
+          </p>
+          <p className="text-sm text-purple-600 dark:text-purple-400">
+            {levelProgress.masteredWords} / {levelProgress.totalWords} words mastered (Guru+)
+          </p>
+          {levelProgress.totalWords > 0 && (
+            <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-3 mt-4 mx-auto max-w-md">
+              <div
+                className="h-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-300"
+                style={{ width: `${levelProgress.progressPercentage}%` }}
+              />
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       {/* All Levels Overview */}
       <div className="space-y-6">

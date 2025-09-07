@@ -52,7 +52,7 @@ export default function LanguageSelector() {
     const language = languages.find(lang => lang.id.toString() === languageId);
     if (!language) return;
 
-    // Optimistically update UI
+    // Optimistic update - immediately update UI
     const previousLanguage = selectedLanguage;
     setSelectedLanguage(language);
 
@@ -60,6 +60,7 @@ export default function LanguageSelector() {
     startTransition(async () => {
       try {
         await updateUserSelectedLanguage(language.id);
+        // Only refresh after successful save to sync other data
         router.refresh();
       } catch (error) {
         console.error('Error updating language:', error);
@@ -119,6 +120,7 @@ export default function LanguageSelector() {
             <div className="p-3 bg-success/10 rounded-lg">
               <p className="text-sm text-success-700">
                 Currently learning: <strong>{selectedLanguage.name}</strong>
+                {isPending && <span className="text-xs text-success-600 ml-2">(updating...)</span>}
               </p>
             </div>
           )}

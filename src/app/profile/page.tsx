@@ -3,11 +3,17 @@ import { getCurrentUser } from '@/lib/server/user.actions';
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import { users, userVocabulary } from '@/db/schema';
-import { PageContainer } from '@/components/shared';
+import { PageContainer, ThemeToggle } from '@/components/shared';
 import { Card, CardBody, CardHeader } from '@heroui/card';
 import { User } from '@heroui/user';
 import { Chip } from '@heroui/chip';
-import { CalendarDaysIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import {
+  CalendarDaysIcon,
+  UserCircleIcon,
+  BookOpenIcon,
+  CheckCircleIcon,
+  ClockIcon,
+} from '@heroicons/react/24/outline';
 import LanguageSelector from '@/components/profile/language-selector';
 
 export default async function ProfilePage() {
@@ -34,11 +40,26 @@ export default async function ProfilePage() {
 
   return (
     <PageContainer>
-      <div className="space-y-6">
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-4 mb-8">
+          <div className="flex items-center justify-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full">
+              <UserCircleIcon className="w-8 h-8 text-white" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Profile Settings</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Manage your account and learning preferences
+            </p>
+          </div>
+        </div>
+
         {/* Profile Header */}
-        <Card>
+        <Card className="bg-gradient-to-br from-indigo-50 to-purple-100 dark:from-indigo-900/20 dark:to-purple-800/30 border-indigo-200 dark:border-indigo-800">
           <CardHeader>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between w-full">
               <User
                 name={dbUser?.name || 'User'}
                 description={authUser.email}
@@ -49,7 +70,7 @@ export default async function ProfilePage() {
                 }}
               />
               {dbUser?.isAdmin && (
-                <Chip color="warning" variant="flat">
+                <Chip color="warning" variant="flat" className="font-medium">
                   Admin
                 </Chip>
               )}
@@ -83,33 +104,68 @@ export default async function ProfilePage() {
           </CardBody>
         </Card>
 
-        {/* Language Settings */}
-        <LanguageSelector />
+        {/* Settings */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Language Settings */}
+          <LanguageSelector />
+
+          {/* Theme Settings */}
+          <Card>
+            <CardBody className="space-y-4">
+              <h3 className="text-xl font-semibold">Theme Preference</h3>
+              <p className="text-sm text-default-500">
+                Choose your preferred color scheme. System will automatically switch based on your
+                device settings.
+              </p>
+              <div className="flex items-center gap-4">
+                <ThemeToggle variant="dropdown" showLabel />
+              </div>
+            </CardBody>
+          </Card>
+        </div>
 
         {/* Learning Statistics */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Learning Progress</h2>
-          </CardHeader>
-          <CardBody>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 rounded-lg bg-primary/10">
-                <p className="text-2xl font-bold text-primary">{totalWords}</p>
-                <p className="text-sm text-default-600">Total Words</p>
-              </div>
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold text-center">Learning Progress</h2>
 
-              <div className="text-center p-4 rounded-lg bg-success/10">
-                <p className="text-2xl font-bold text-success">{masteredWords}</p>
-                <p className="text-sm text-default-600">Mastered Words</p>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 border-blue-200 dark:border-blue-800">
+              <CardBody className="p-6 text-center">
+                <div className="p-2 bg-blue-500 rounded-lg w-fit mx-auto mb-3">
+                  <BookOpenIcon className="w-6 h-6 text-white" />
+                </div>
+                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                  {totalWords}
+                </p>
+                <p className="text-sm text-blue-600 dark:text-blue-400">Total Words</p>
+              </CardBody>
+            </Card>
 
-              <div className="text-center p-4 rounded-lg bg-warning/10">
-                <p className="text-2xl font-bold text-warning">{learningWords}</p>
-                <p className="text-sm text-default-600">Learning Words</p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 border-green-200 dark:border-green-800">
+              <CardBody className="p-6 text-center">
+                <div className="p-2 bg-green-500 rounded-lg w-fit mx-auto mb-3">
+                  <CheckCircleIcon className="w-6 h-6 text-white" />
+                </div>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300 mb-1">
+                  {masteredWords}
+                </p>
+                <p className="text-sm text-green-600 dark:text-green-400">Mastered Words</p>
+              </CardBody>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/30 border-orange-200 dark:border-orange-800">
+              <CardBody className="p-6 text-center">
+                <div className="p-2 bg-orange-500 rounded-lg w-fit mx-auto mb-3">
+                  <ClockIcon className="w-6 h-6 text-white" />
+                </div>
+                <p className="text-2xl font-bold text-orange-700 dark:text-orange-300 mb-1">
+                  {learningWords}
+                </p>
+                <p className="text-sm text-orange-600 dark:text-orange-400">Learning Words</p>
+              </CardBody>
+            </Card>
+          </div>
+        </div>
       </div>
     </PageContainer>
   );

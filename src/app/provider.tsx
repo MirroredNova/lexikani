@@ -2,6 +2,7 @@
 
 import { HeroUIProvider } from '@heroui/react';
 import { UserProvider } from '@/contexts/user-context';
+import { ThemeProvider } from '@/contexts/theme-context';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -10,7 +11,9 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <HeroUIProvider>
-      <UserProvider>{children}</UserProvider>
+      <ThemeProvider>
+        <UserProvider>{children}</UserProvider>
+      </ThemeProvider>
     </HeroUIProvider>
   );
 }

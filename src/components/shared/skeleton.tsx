@@ -1,73 +1,134 @@
 import React from 'react';
+import { Card, CardBody } from '@heroui/card';
 
 interface SkeletonProps {
-  width?: string;
-  height?: string;
   className?: string;
-  variant?: 'text' | 'rectangular' | 'circular';
 }
 
-const variantClasses = {
-  text: 'h-4',
-  rectangular: 'h-8',
-  circular: 'rounded-full aspect-square',
-};
+export function Skeleton({ className = '' }: SkeletonProps) {
+  return <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`} />;
+}
 
-export default function Skeleton({
-  width = 'w-full',
-  height,
-  className = '',
-  variant = 'rectangular',
-}: SkeletonProps) {
-  const heightClass = height || variantClasses[variant];
-  const roundedClass = variant === 'circular' ? 'rounded-full' : 'rounded';
-
+export function SkeletonCard({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className={`bg-gray-200 dark:bg-gray-700 animate-pulse ${heightClass} ${width} ${roundedClass} ${className}`}
-    />
+    <Card className="hover:shadow-md transition-all duration-200">
+      <CardBody className="p-6">{children}</CardBody>
+    </Card>
   );
 }
 
-// Compound components for common patterns
-interface SkeletonTextProps {
-  lines?: number;
-  className?: string;
+export function SkeletonHeader() {
+  return (
+    <div className="text-center space-y-4 mb-8">
+      <div className="flex items-center justify-center gap-3">
+        <Skeleton className="w-12 h-12 rounded-full" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-64 mx-auto" />
+        <Skeleton className="h-4 w-96 mx-auto" />
+      </div>
+    </div>
+  );
 }
 
-function SkeletonText({ lines = 1, className = '' }: SkeletonTextProps) {
+export function SkeletonProgressCard() {
   return (
-    <div className={`space-y-2 ${className}`}>
-      {Array.from({ length: lines }).map((_, i) => (
-        <Skeleton key={i} variant="text" width={i === lines - 1 ? 'w-3/4' : 'w-full'} />
+    <Card className="mb-8">
+      <CardBody className="p-6 text-center">
+        <div className="flex items-center justify-center gap-4 mb-3">
+          <Skeleton className="w-8 h-8 rounded-lg" />
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <Skeleton className="h-8 w-24 mx-auto mb-2" />
+        <Skeleton className="h-4 w-48 mx-auto mb-4" />
+        <Skeleton className="h-3 w-full max-w-md mx-auto rounded-full" />
+      </CardBody>
+    </Card>
+  );
+}
+
+export function SkeletonStatCard() {
+  return (
+    <SkeletonCard>
+      <div className="flex items-start gap-4">
+        <Skeleton className="w-10 h-10 rounded-lg" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+      </div>
+    </SkeletonCard>
+  );
+}
+
+export function SkeletonTable() {
+  return (
+    <div className="space-y-4">
+      {/* Search and filters */}
+      <div className="flex gap-4 mb-6">
+        <Skeleton className="h-10 flex-1" />
+        <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+
+      {/* Table rows */}
+      <div className="space-y-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Card key={i}>
+            <CardBody className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-4 w-48" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </div>
+                </div>
+                <div className="text-right space-y-1">
+                  <Skeleton className="h-4 w-20 ml-auto" />
+                  <Skeleton className="h-3 w-16 ml-auto" />
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        ))}
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-between items-center">
+        <Skeleton className="h-4 w-32" />
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-8 rounded" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonLevelAccordion() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Card key={i} className="hover:shadow-lg transition-all duration-200">
+          <CardBody className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Skeleton className="w-12 h-8 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </div>
+              <Skeleton className="w-5 h-5" />
+            </div>
+          </CardBody>
+        </Card>
       ))}
     </div>
   );
 }
-
-interface SkeletonHeaderProps {
-  className?: string;
-}
-
-function SkeletonHeader({ className = '' }: SkeletonHeaderProps) {
-  return <Skeleton height="h-8" width="w-1/3" className={className} />;
-}
-
-interface SkeletonCardProps {
-  className?: string;
-}
-
-function SkeletonCard({ className = '' }: SkeletonCardProps) {
-  return (
-    <div className={`space-y-4 animate-pulse ${className}`}>
-      <Skeleton height="h-6" width="w-3/4" />
-      <Skeleton height="h-4" width="w-1/2" />
-      <Skeleton height="h-10" />
-    </div>
-  );
-}
-
-// Attach compound components
-Skeleton.Text = SkeletonText;
-Skeleton.Header = SkeletonHeader;
-Skeleton.Card = SkeletonCard;

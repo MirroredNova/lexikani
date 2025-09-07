@@ -54,7 +54,7 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className="dark text-foreground bg-background">
+    <html lang="en" className="text-foreground bg-background" suppressHydrationWarning>
       <body>
         <Providers>
           <NavigationBar />

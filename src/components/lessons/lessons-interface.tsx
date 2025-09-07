@@ -4,7 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import type { VocabularyItem, Language } from '@/types';
 import { Button } from '@heroui/button';
 import { Card, CardBody } from '@heroui/card';
-import { SparklesIcon, CheckCircleIcon, BookOpenIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import {
+  SparklesIcon,
+  CheckCircleIcon,
+  BookOpenIcon,
+  ArrowRightIcon,
+} from '@heroicons/react/24/outline';
 import Flashcard from '@/components/lessons/flashcard';
 import QuizSection from '@/components/lessons/quiz-section';
 import { completeLesson, getAvailableLessons } from '@/lib/server/vocabulary.actions';
@@ -194,7 +199,10 @@ export default function LessonsInterface({ initialLessons, language }: LessonsIn
                       Quiz Results
                     </h3>
                     <p className="text-2xl font-bold text-pink-700 dark:text-pink-300 mb-1">
-                      {Math.round((quizResults.firstAttemptCorrect / quizResults.totalQuestions) * 100)}%
+                      {Math.round(
+                        (quizResults.firstAttemptCorrect / quizResults.totalQuestions) * 100,
+                      )}
+                      %
                     </p>
                     <p className="text-sm text-pink-600 dark:text-pink-400 mb-2">
                       {quizResults.firstAttemptCorrect} out of {quizResults.totalQuestions} correct

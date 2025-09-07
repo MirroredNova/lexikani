@@ -58,12 +58,12 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
   const handleNextQuestion = useCallback(() => {
     // Disable undo when moving to next question
     setCanUndo(false);
-    
+
     // Don't clear lastAnswer on final question to preserve visual feedback
     if (currentQuestionIndex < questions.length - 1) {
       setLastAnswer(null);
     }
-    
+
     setShowWordDetails(false);
 
     if (currentQuestionIndex < questions.length - 1) {

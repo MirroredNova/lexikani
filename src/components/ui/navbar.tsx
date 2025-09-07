@@ -9,6 +9,7 @@ import { logout } from '@/lib/server/auth.actions';
 import { useRouter } from 'next/navigation';
 import { useAdmin } from '@/hooks/use-admin';
 import { Cog6ToothIcon, UserIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { ThemeToggle } from '@/components/shared';
 
 const NavigationBar = () => {
   const { user, loading, refreshUser } = useUser();
@@ -61,6 +62,9 @@ const NavigationBar = () => {
         ) : user ? (
           <>
             <NavbarItem>
+              <ThemeToggle size="sm" />
+            </NavbarItem>
+            <NavbarItem>
               <Button
                 as={NextLink}
                 href="/profile"
@@ -98,6 +102,9 @@ const NavigationBar = () => {
           </>
         ) : (
           <>
+            <NavbarItem>
+              <ThemeToggle size="sm" />
+            </NavbarItem>
             <NavbarItem className="hidden lg:flex">
               <NextLink href="/login">Login</NextLink>
             </NavbarItem>
