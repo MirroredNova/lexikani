@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { VocabularyItem } from '@/types';
+import type { VocabularyItem, Language } from '@/types';
 import { Button } from '@heroui/button';
-import { SparklesIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { Card, CardBody } from '@heroui/card';
+import { SparklesIcon, CheckCircleIcon, BookOpenIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import Flashcard from '@/components/lessons/flashcard';
 import QuizSection from '@/components/lessons/quiz-section';
 import { completeLesson, getAvailableLessons } from '@/lib/server/vocabulary.actions';
@@ -14,9 +15,10 @@ type LessonPhase = 'learning' | 'quiz' | 'complete';
 
 interface LessonsInterfaceProps {
   initialLessons: VocabularyItem[];
+  language: Language;
 }
 
-export default function LessonsInterface({ initialLessons }: LessonsInterfaceProps) {
+export default function LessonsInterface({ initialLessons, language }: LessonsInterfaceProps) {
   const [currentPhase, setCurrentPhase] = useState<LessonPhase>('learning');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [currentLessons, setCurrentLessons] = useState<VocabularyItem[]>(initialLessons);
@@ -132,78 +134,110 @@ export default function LessonsInterface({ initialLessons }: LessonsInterfacePro
         words={currentLessons}
         onComplete={handleQuizComplete}
         onBack={handleBackToLesson}
+        language={language}
       />
     );
   }
 
   if (currentPhase === 'complete') {
     return (
-      <div className="text-center space-y-6">
-        <div className="flex items-center justify-center gap-3">
-          <SparklesIcon className="w-8 h-8 text-green-600" />
-          <h2 className="text-2xl font-bold text-green-600">Lesson Complete!</h2>
-        </div>
-
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <p className="text-blue-800 dark:text-blue-200 font-medium flex items-center justify-center gap-2">
-            <CheckCircleIcon className="w-5 h-5" />
-            {currentLessons.length} words added to your review queue!
-          </p>
-          <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
-            You&apos;ll see these words again for review based on spaced repetition.
-          </p>
-        </div>
-
-        {quizResults && (
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-            <h3 className="text-xl font-semibold mb-2">Quiz Results</h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-lg">
-                  First attempt:{' '}
-                  <span className="font-bold text-blue-600">{quizResults.firstAttemptCorrect}</span>{' '}
-                  out of <span className="font-bold">{quizResults.totalQuestions}</span> correct
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Initial accuracy:{' '}
-                  {Math.round((quizResults.firstAttemptCorrect / quizResults.totalQuestions) * 100)}
-                  %
-                </p>
-              </div>
-
-              {quizResults.firstAttemptCorrect < quizResults.totalQuestions && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                  <p className="text-green-800 dark:text-green-200 font-medium text-sm">
-                    All questions completed through retesting!
-                  </p>
-                  <p className="text-green-600 dark:text-green-300 text-xs mt-1">
-                    Incorrect answers were reviewed until mastered
-                  </p>
-                </div>
-              )}
-
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                Tested both Norwegian→English and English→Norwegian for each word
-              </p>
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full">
+              <SparklesIcon className="w-8 h-8 text-white" />
             </div>
           </div>
-        )}
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Lesson Complete!</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Great job learning new Norwegian vocabulary!
+            </p>
+          </div>
+        </div>
 
-        <div className="space-y-4">
+        {/* Cards Grid */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Words Added Card */}
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 border-blue-200 dark:border-blue-800">
+            <CardBody className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-2 bg-blue-500 rounded-lg">
+                  <CheckCircleIcon className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                    Words Added to Reviews
+                  </h3>
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-2">
+                    {currentLessons.length}
+                  </p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                    Ready for spaced repetition review
+                  </p>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* Quiz Results Card */}
+          {quizResults && (
+            <Card className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/30 border-pink-200 dark:border-pink-800">
+              <CardBody className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-pink-500 rounded-lg">
+                    <BookOpenIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-pink-900 dark:text-pink-100 mb-1">
+                      Quiz Results
+                    </h3>
+                    <p className="text-2xl font-bold text-pink-700 dark:text-pink-300 mb-1">
+                      {Math.round((quizResults.firstAttemptCorrect / quizResults.totalQuestions) * 100)}%
+                    </p>
+                    <p className="text-sm text-pink-600 dark:text-pink-400 mb-2">
+                      {quizResults.firstAttemptCorrect} out of {quizResults.totalQuestions} correct
+                    </p>
+                    {quizResults.firstAttemptCorrect < quizResults.totalQuestions && (
+                      <p className="text-xs text-pink-500 dark:text-pink-500">
+                        ✓ All questions mastered through retesting
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+        </div>
+
+        {/* Additional Info */}
+        <Card>
+          <CardBody className="p-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+              <SparklesIcon className="w-4 h-4 inline mr-1" />
+              Tested both {language.name}→English and English→{language.name} for each word
+            </p>
+          </CardBody>
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4">
           <Button
             color="primary"
             size="lg"
             onPress={handleStartNewLesson}
-            className="w-full"
+            className="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700"
             isLoading={isLoadingNewLessons}
+            endContent={<ArrowRightIcon className="w-4 h-4" />}
           >
-            {isLoadingNewLessons ? 'Loading New Lessons...' : 'Continue Learning'}
+            {isLoadingNewLessons ? 'Loading...' : 'Continue Learning'}
           </Button>
           <Button
             variant="bordered"
             size="lg"
             onPress={() => window.history.back()}
-            className="w-full"
+            className="sm:w-40"
           >
             Back to Home
           </Button>

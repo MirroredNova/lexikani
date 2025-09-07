@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@heroui/button';
-import type { ReviewItem, ReviewQuestion, ReviewPair } from '@/types';
+import { Card, CardBody } from '@heroui/card';
+import type { ReviewItem, ReviewQuestion, ReviewPair, Language } from '@/types';
 import { reviewWord } from '@/lib/server/vocabulary.actions';
 import { ProgressBar, QuestionCard, VocabularyCard, VocabularyNotes } from '@/components/shared';
+import { CheckCircleIcon, ArrowPathIcon, HomeIcon } from '@heroicons/react/24/outline';
 import {
   fuzzyMatchText,
   generateReviewQuestions,
@@ -14,9 +16,10 @@ import {
 
 interface ReviewInterfaceProps {
   initialReviews: ReviewItem[];
+  language: Language;
 }
 
-export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps) {
+export default function ReviewInterface({ initialReviews, language }: ReviewInterfaceProps) {
   const [questions, setQuestions] = useState<ReviewQuestion[]>([]);
   const [reviewPairs, setReviewPairs] = useState<Map<string, ReviewPair>>(new Map());
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -51,7 +54,12 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
   const handleNextQuestion = useCallback(() => {
     // Disable undo when moving to next question
     setCanUndo(false);
-    setLastAnswer(null);
+
+    // Don't clear lastAnswer on final question to preserve visual feedback
+    if (currentQuestionIndex < questions.length - 1) {
+      setLastAnswer(null);
+    }
+
     setShowWordDetails(false);
 
     if (currentQuestionIndex < questions.length - 1) {
@@ -117,7 +125,7 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
       setCorrectAnswers(prev => prev + 1);
     }
 
-    // Always enable undo and store current state
+    // Set the answer state immediately with the current result
     setCanUndo(true);
     setLastAnswer(currentState);
 
@@ -204,35 +212,87 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
 
   if (reviewComplete) {
     return (
-      <div className="text-center space-y-6">
-        <h2 className="text-2xl font-bold text-green-600">Review Session Complete!</h2>
-
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <p className="text-blue-800 dark:text-blue-200 font-medium">
-            Reviewed {initialReviews.length} words with SRS progression updated!
-          </p>
-          <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
-            Your learning schedule has been automatically adjusted based on performance.
-          </p>
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full">
+              <ArrowPathIcon className="w-8 h-8 text-white" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Review Session Complete!</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Excellent work reinforcing your {language.name} vocabulary!
+            </p>
+          </div>
         </div>
 
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-          <h3 className="text-xl font-semibold mb-2">Session Results</h3>
-          <p className="text-lg">
-            You got <span className="font-bold text-green-600">{correctAnswers}</span> out of{' '}
-            <span className="font-bold">{totalQuestions}</span> correct!
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Accuracy: {Math.round((correctAnswers / totalQuestions) * 100)}%
-          </p>
+        {/* Cards Grid */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Words Reviewed Card */}
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 border-green-200 dark:border-green-800">
+            <CardBody className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-2 bg-green-500 rounded-lg">
+                  <CheckCircleIcon className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-green-900 dark:text-green-100 mb-1">
+                    Words Reviewed
+                  </h3>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300 mb-2">
+                    {initialReviews.length}
+                  </p>
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    SRS progression updated automatically
+                  </p>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* Accuracy Card */}
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 border-blue-200 dark:border-blue-800">
+            <CardBody className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-2 bg-blue-500 rounded-lg">
+                  <ArrowPathIcon className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                    Session Accuracy
+                  </h3>
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                    {Math.round((correctAnswers / totalQuestions) * 100)}%
+                  </p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mb-2">
+                    {correctAnswers} out of {totalQuestions} correct
+                  </p>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
         </div>
 
-        <div className="space-y-4">
+        {/* Additional Info */}
+        <Card>
+          <CardBody className="p-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+              <ArrowPathIcon className="w-4 h-4 inline mr-1" />
+              Your spaced repetition schedule has been adjusted based on your performance
+            </p>
+          </CardBody>
+        </Card>
+
+        {/* Action Button */}
+        <div className="flex justify-center">
           <Button
             color="primary"
             size="lg"
             onPress={() => (window.location.href = '/')}
-            className="w-full"
+            className="w-full max-w-md bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+            endContent={<HomeIcon className="w-4 h-4" />}
           >
             Back to Home
           </Button>
@@ -281,6 +341,7 @@ export default function ReviewInterface({ initialReviews }: ReviewInterfaceProps
           attributes: currentQuestion.item.attributes,
         }}
         onShowDetails={handleShowDetails}
+        language={language}
         additionalFeedback={
           showResult && (
             <>

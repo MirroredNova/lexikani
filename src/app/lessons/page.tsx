@@ -72,7 +72,7 @@ export default async function LessonsPage() {
         </Button>
       </div>
 
-      <LessonsInterface initialLessons={availableLessons} />
+      <LessonsInterface initialLessons={availableLessons} language={selectedLanguage} />
     </div>
   );
 }

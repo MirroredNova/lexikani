@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@heroui/button';
-import type { VocabularyItem, QuizQuestion } from '@/types';
+import type { VocabularyItem, QuizQuestion, Language } from '@/types';
 import { ProgressBar, QuestionCard, VocabularyCard, VocabularyNotes } from '@/components/shared';
 import {
   fuzzyMatchText,
@@ -19,9 +19,10 @@ interface QuizSectionProps {
     allQuestionsCompleted: boolean;
   }) => void;
   onBack: () => void;
+  language: Language;
 }
 
-export default function QuizSection({ words, onComplete, onBack }: QuizSectionProps) {
+export default function QuizSection({ words, onComplete, onBack, language }: QuizSectionProps) {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userInput, setUserInput] = useState<string>('');
@@ -57,7 +58,12 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
   const handleNextQuestion = useCallback(() => {
     // Disable undo when moving to next question
     setCanUndo(false);
-    setLastAnswer(null);
+    
+    // Don't clear lastAnswer on final question to preserve visual feedback
+    if (currentQuestionIndex < questions.length - 1) {
+      setLastAnswer(null);
+    }
+    
     setShowWordDetails(false);
 
     if (currentQuestionIndex < questions.length - 1) {
@@ -165,7 +171,6 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
     // Always enable undo and store current state
     setCanUndo(true);
     setLastAnswer(currentState);
-
     setShowResult(true);
   };
 
@@ -244,6 +249,7 @@ export default function QuizSection({ words, onComplete, onBack }: QuizSectionPr
           attributes: currentQuestion.word.attributes,
         }}
         onShowDetails={handleShowDetails}
+        language={language}
         additionalFeedback={
           showResult && (
             <>

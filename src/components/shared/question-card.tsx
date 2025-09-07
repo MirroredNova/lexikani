@@ -6,7 +6,7 @@ import { Button } from '@heroui/button';
 import { Chip } from '@heroui/chip';
 import { Input } from '@heroui/input';
 import { SparklesIcon, XCircleIcon, LightBulbIcon } from '@heroicons/react/24/outline';
-import type { VocabularyAttributes } from '@/types';
+import type { VocabularyAttributes, Language } from '@/types';
 
 interface QuestionCardProps {
   questionNumber: number;
@@ -33,6 +33,7 @@ interface QuestionCardProps {
     attributes: VocabularyAttributes | null;
   };
   onShowDetails?: () => void;
+  language?: Language;
 }
 
 export default function QuestionCard({
@@ -53,6 +54,7 @@ export default function QuestionCard({
   additionalFeedback,
   showRetestIndicator = false,
   onShowDetails,
+  language,
 }: QuestionCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showDetails, setShowDetails] = React.useState(false);
@@ -127,7 +129,21 @@ export default function QuestionCard({
         <div className="text-center">
           <h3 className="text-3xl font-bold mb-2 text-primary">{question}</h3>
           <p className="text-gray-600 dark:text-gray-400">
-            Type the correct {direction === 'word-to-meaning' ? 'meaning' : 'word'}:
+            {language ? (
+              direction === 'word-to-meaning' ? (
+                <>
+                  Translate from <span className="font-semibold">{language.name}</span> to{' '}
+                  <span className="font-semibold">English</span>:
+                </>
+              ) : (
+                <>
+                  Translate from <span className="font-semibold">English</span> to{' '}
+                  <span className="font-semibold">{language.name}</span>:
+                </>
+              )
+            ) : (
+              `Type the correct ${direction === 'word-to-meaning' ? 'meaning' : 'word'}:`
+            )}
           </p>
         </div>
 

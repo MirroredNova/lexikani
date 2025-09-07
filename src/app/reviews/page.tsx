@@ -44,7 +44,7 @@ export default async function ReviewsPage() {
   return (
     <div className="container mx-auto max-w-4xl p-6">
       <h1 className="text-3xl font-bold mb-8">Reviews - {selectedLanguage.name}</h1>
-      <ReviewInterface initialReviews={reviewsReady} />
+      <ReviewInterface initialReviews={reviewsReady} language={selectedLanguage} />
     </div>
   );
 }
