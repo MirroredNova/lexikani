@@ -24,3 +24,5 @@ export { default as SessionHeader } from './session-header';
 export * from './skeleton';
 export { default as EmptyState } from './empty-state';
 export { default as PageContainer } from './page-container';
+export { default as StickyActionBar } from './sticky-action-bar';
+export { default as WordDetailsPanel } from './word-details-panel';

@@ -2,7 +2,7 @@ import { getAvailableLessons } from '@/lib/server/vocabulary.actions';
 import { getUserSelectedLanguage } from '@/lib/server/user.actions';
 import LessonsInterface from '@/components/lessons/lessons-interface';
 import { Button } from '@heroui/button';
-import { InformationCircleIcon, TrophyIcon } from '@heroicons/react/24/outline';
+import { TrophyIcon } from '@heroicons/react/24/outline';
 import NextLink from 'next/link';
 import type { Metadata } from 'next';
 
@@ -17,7 +17,7 @@ export default async function LessonsPage() {
 
   if (!selectedLanguage) {
     return (
-      <div className="container mx-auto max-w-4xl p-6">
+      <div className="container mx-auto p-6">
         <h1 className="text-3xl font-bold mb-8">Lessons</h1>
         <p>No language selected. Please select a language from the navigation bar.</p>
       </div>
@@ -28,20 +28,7 @@ export default async function LessonsPage() {
 
   if (availableLessons.length === 0) {
     return (
-      <div className="container mx-auto max-w-4xl p-6">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Lessons - {selectedLanguage.name}</h1>
-          <Button
-            as={NextLink}
-            href="/levels"
-            variant="ghost"
-            size="sm"
-            startContent={<InformationCircleIcon className="w-4 h-4" />}
-          >
-            View Level Info
-          </Button>
-        </div>
-
+      <div className="container mx-auto p-6">
         <div className="text-center space-y-4">
           <TrophyIcon className="w-24 h-24 text-yellow-500 mx-auto" />
           <h2 className="text-2xl font-semibold">Level Complete!</h2>
@@ -58,20 +45,7 @@ export default async function LessonsPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl p-6">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Lessons - {selectedLanguage.name}</h1>
-        <Button
-          as={NextLink}
-          href="/levels"
-          variant="ghost"
-          size="sm"
-          startContent={<InformationCircleIcon className="w-4 h-4" />}
-        >
-          View Level Info
-        </Button>
-      </div>
-
+    <div className="container mx-auto p-6">
       <LessonsInterface initialLessons={availableLessons} language={selectedLanguage} />
     </div>
   );

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@heroui/button';
+// import { Button } from '@heroui/button';
 import type { VocabularyItem, QuizQuestion, Language } from '@/types';
-import { ProgressBar, QuestionCard, VocabularyCard, VocabularyNotes } from '@/components/shared';
+import { ProgressBar, QuestionCard, SessionHeader } from '@/components/shared';
+import WordDetailsPanel from '@/components/shared/word-details-panel';
 import {
   fuzzyMatchText,
   generateQuizQuestions,
@@ -204,27 +205,21 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onPress={onBack}>
-          ← Back to Lesson
-        </Button>
-        <div className="text-center">
-          <h2 className="text-xl font-semibold">{isRetestPhase ? 'Retest Phase' : 'Quiz Time!'}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {words.length} words • {totalQuestions} questions
-            {isRetestPhase && ' (reviewing incorrect answers)'}
-          </p>
-        </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {isRetestPhase ? (
-            <span>Retesting...</span>
+      <SessionHeader
+        title={isRetestPhase ? 'Retest Phase' : 'Quiz Time!'}
+        subtitle={`${words.length} words • ${totalQuestions} questions${isRetestPhase ? ' (reviewing incorrect answers)' : ''}`}
+        backButtonText="← Back to Lesson"
+        onBack={onBack}
+        rightContent={
+          isRetestPhase ? (
+            'Retesting...'
           ) : (
             <span>
               {firstAttemptCorrect}/{Math.min(questionsAnswered, totalQuestions)} correct
             </span>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       <ProgressBar progress={progress} color="secondary" />
 
@@ -254,28 +249,14 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
           showResult && (
             <>
               {showWordDetails && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-4">
-                  <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-3">
-                    Word Details
-                  </h4>
-                  <VocabularyCard
-                    id={currentQuestion.word.id}
-                    word={currentQuestion.word.word}
-                    meaning={currentQuestion.word.meaning}
-                    type={currentQuestion.word.type}
-                    level={currentQuestion.word.level}
-                    attributes={currentQuestion.word.attributes}
-                    variant="simple"
-                  />
-                  <div className="flex justify-center pt-2">
-                    <VocabularyNotes
-                      vocabularyId={currentQuestion.word.id}
-                      word={currentQuestion.word.word}
-                      variant="button"
-                      size="sm"
-                    />
-                  </div>
-                </div>
+                <WordDetailsPanel
+                  id={currentQuestion.word.id}
+                  word={currentQuestion.word.word}
+                  meaning={currentQuestion.word.meaning}
+                  type={currentQuestion.word.type}
+                  level={currentQuestion.word.level}
+                  attributes={currentQuestion.word.attributes}
+                />
               )}
               {!fuzzyMatchText(userInput, currentQuestion.correctAnswer) && !isRetestPhase && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">

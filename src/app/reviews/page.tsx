@@ -27,7 +27,6 @@ export default async function ReviewsPage() {
   if (reviewsReady.length === 0) {
     return (
       <div className="container mx-auto max-w-4xl p-6">
-        <h1 className="text-3xl font-bold mb-8">Reviews - {selectedLanguage.name}</h1>
         <div className="text-center space-y-4">
           <div className="flex justify-center">
             <SparklesIcon className="h-16 w-16 text-green-500" />
@@ -43,7 +42,6 @@ export default async function ReviewsPage() {
 
   return (
     <div className="container mx-auto max-w-4xl p-6">
-      <h1 className="text-3xl font-bold mb-8">Reviews - {selectedLanguage.name}</h1>
       <ReviewInterface initialReviews={reviewsReady} language={selectedLanguage} />
     </div>
   );

@@ -8,7 +8,7 @@ type Props = {
 
 const Flashcard = ({ word }: Props) => {
   return (
-    <div className="max-w-lg mx-auto space-y-4">
+    <div className="w-full space-y-4">
       <VocabularyCard
         id={word.id}
         word={word.word}

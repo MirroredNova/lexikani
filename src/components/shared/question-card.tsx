@@ -34,6 +34,8 @@ interface QuestionCardProps {
   };
   onShowDetails?: () => void;
   language?: Language;
+  canUndo?: boolean;
+  onUndo?: () => void;
 }
 
 export default function QuestionCard({
@@ -55,6 +57,8 @@ export default function QuestionCard({
   showRetestIndicator = false,
   onShowDetails,
   language,
+  canUndo,
+  onUndo,
 }: QuestionCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showDetails, setShowDetails] = React.useState(false);
@@ -112,182 +116,217 @@ export default function QuestionCard({
   };
 
   return (
-    <Card className="hover:shadow-md transition-all duration-200">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between w-full">
-          <span className="text-lg font-medium">
-            Question {questionNumber} of {totalQuestions}
-            {showRetestIndicator && ' (retest)'}
-          </span>
-          <Chip size="sm" color="secondary" variant="flat">
-            {direction === 'word-to-meaning' ? 'Word → Meaning' : 'Meaning → Word'}
-          </Chip>
-        </div>
-      </CardHeader>
+    <>
+      <Card className="hover:shadow-md transition-all duration-200">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between w-full">
+            <span className="text-lg font-medium">
+              Question {questionNumber} of {totalQuestions}
+              {showRetestIndicator && ' (retest)'}
+            </span>
+            <Chip size="sm" color="secondary" variant="flat">
+              {direction === 'word-to-meaning' ? 'Word → Meaning' : 'Meaning → Word'}
+            </Chip>
+          </div>
+        </CardHeader>
 
-      <CardBody className="p-6 space-y-6">
-        <div className="text-center">
-          <h3 className="text-3xl font-bold mb-2 text-primary">{question}</h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            {language ? (
-              direction === 'word-to-meaning' ? (
-                <>
-                  Translate from <span className="font-semibold">{language.name}</span> to{' '}
-                  <span className="font-semibold">English</span>:
-                </>
-              ) : (
-                <>
-                  Translate from <span className="font-semibold">English</span> to{' '}
-                  <span className="font-semibold">{language.name}</span>:
-                </>
-              )
-            ) : (
-              `Type the correct ${direction === 'word-to-meaning' ? 'meaning' : 'word'}:`
-            )}
-          </p>
-        </div>
-
-        <div className="max-w-md mx-auto">
-          <Input
-            ref={inputRef}
-            value={userInput}
-            onValueChange={onInputChange}
-            placeholder="Type your answer..."
-            size="lg"
-            isDisabled={showResult || isProcessing}
-            color={showResult ? (isCorrect ? 'success' : 'danger') : 'default'}
-            onKeyDown={handleInputKeyDown}
-          />
-          {!showResult && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-              Press <kbd className="bg-gray-200 dark:bg-gray-600 px-1 rounded text-xs">Enter</kbd>{' '}
-              to submit
-            </p>
-          )}
-        </div>
-
-        {showResult && (
-          <div
-            className={`text-center p-4 rounded-lg ${
-              isCorrect
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-            }`}
-          >
-            {isCorrect ? (
-              <div>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <SparklesIcon className="w-5 h-5" />
-                  <p className="font-medium">Correct!</p>
-                </div>
-
-                {!showDetails && onShowDetails && (
-                  <div className="mt-3 space-y-2">
-                    <Button
-                      size="sm"
-                      color="success"
-                      variant="light"
-                      onPress={() => {
-                        setShowDetails(prev => !prev);
-                        onShowDetails();
-                      }}
-                    >
-                      View Word Details
-                    </Button>
-                    <p className="text-xs opacity-75">
-                      Or press{' '}
-                      <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Space</kbd>{' '}
-                      to toggle details
-                    </p>
-                  </div>
-                )}
-
-                <p className="text-xs mt-2 opacity-75">
-                  Press{' '}
-                  <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Enter</kbd> to
-                  continue
-                </p>
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <XCircleIcon className="w-5 h-5" />
-                  <p className="font-medium">Incorrect</p>
-                </div>
-                {userInput && (
-                  <p className="text-sm mt-1">
-                    You wrote: <strong>{userInput}</strong>
-                  </p>
-                )}
-
-                {!showDetails && onShowDetails && (
-                  <div className="mt-3 space-y-2">
-                    <Button
-                      size="sm"
-                      color="primary"
-                      variant="light"
-                      onPress={() => {
-                        setShowDetails(prev => !prev);
-                        onShowDetails();
-                      }}
-                    >
-                      Show Answer
-                    </Button>
-                    <p className="text-xs opacity-75">
-                      Or press{' '}
-                      <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Space</kbd>{' '}
-                      to toggle details
-                    </p>
-                  </div>
-                )}
-
-                {(showDetails || !onShowDetails) && (
+        <CardBody className="p-6 space-y-6">
+          <div className="text-center">
+            <h3 className="text-3xl font-bold mb-2 text-primary">{question}</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              {language ? (
+                direction === 'word-to-meaning' ? (
                   <>
-                    {correctAnswer && (
-                      <p className="text-sm mt-1">
-                        The correct answer was: <strong>{correctAnswer}</strong>
-                      </p>
-                    )}
-                    {correctAnswer && /[æøå]/i.test(correctAnswer) && (
-                      <p className="text-xs mt-1 opacity-75 flex items-center justify-center gap-1">
-                        <LightBulbIcon className="w-4 h-4" />
-                        Tip: You can type &quot;ae&quot; for &quot;æ&quot;, &quot;o&quot; for
-                        &quot;ø&quot;, &quot;a&quot; for &quot;å&quot;
-                      </p>
-                    )}
+                    Translate from <span className="font-semibold">{language.name}</span> to{' '}
+                    <span className="font-semibold">English</span>:
                   </>
-                )}
+                ) : (
+                  <>
+                    Translate from <span className="font-semibold">English</span> to{' '}
+                    <span className="font-semibold">{language.name}</span>:
+                  </>
+                )
+              ) : (
+                `Type the correct ${direction === 'word-to-meaning' ? 'meaning' : 'word'}:`
+              )}
+            </p>
+          </div>
 
-                <p className="text-xs mt-2 opacity-75">
-                  Press{' '}
-                  <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Enter</kbd> to
-                  continue
-                </p>
-              </div>
+          <div className="max-w-md mx-auto">
+            <Input
+              ref={inputRef}
+              value={userInput}
+              onValueChange={onInputChange}
+              placeholder="Type your answer..."
+              size="lg"
+              isDisabled={showResult || isProcessing}
+              color={showResult ? (isCorrect ? 'success' : 'danger') : 'default'}
+              onKeyDown={handleInputKeyDown}
+            />
+            {!showResult && (
+              <p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                Press <kbd className="bg-gray-200 dark:bg-gray-600 px-1 rounded text-xs">Enter</kbd>{' '}
+                to submit
+              </p>
             )}
           </div>
-        )}
 
-        {additionalFeedback && showResult && additionalFeedback}
+          {showResult && (
+            <div
+              className={`text-center p-4 rounded-lg ${
+                isCorrect
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+              }`}
+            >
+              {isCorrect ? (
+                <div>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <SparklesIcon className="w-5 h-5" />
+                    <p className="font-medium">Correct!</p>
+                  </div>
 
-        <div className="flex justify-between items-center">
-          <div></div>
+                  {!showDetails && onShowDetails && (
+                    <div className="mt-3 space-y-2">
+                      <Button
+                        size="sm"
+                        color="success"
+                        variant="light"
+                        onPress={() => {
+                          setShowDetails(prev => !prev);
+                          onShowDetails();
+                        }}
+                      >
+                        View Word Details
+                      </Button>
+                      <p className="hidden sm:block text-xs opacity-75">
+                        Or press{' '}
+                        <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">
+                          Space
+                        </kbd>{' '}
+                        to toggle details
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="hidden sm:block text-xs mt-2 opacity-75">
+                    Press{' '}
+                    <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Enter</kbd>{' '}
+                    to continue
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <XCircleIcon className="w-5 h-5" />
+                    <p className="font-medium">Incorrect</p>
+                  </div>
+                  {userInput && (
+                    <p className="text-sm mt-1">
+                      You wrote: <strong>{userInput}</strong>
+                    </p>
+                  )}
+
+                  {!showDetails && onShowDetails && (
+                    <div className="mt-3 space-y-2">
+                      <Button
+                        size="sm"
+                        color="primary"
+                        variant="light"
+                        onPress={() => {
+                          setShowDetails(prev => !prev);
+                          onShowDetails();
+                        }}
+                      >
+                        Show Answer
+                      </Button>
+                      <p className="hidden sm:block text-xs opacity-75">
+                        Or press{' '}
+                        <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">
+                          Space
+                        </kbd>{' '}
+                        to toggle details
+                      </p>
+                    </div>
+                  )}
+
+                  {(showDetails || !onShowDetails) && (
+                    <>
+                      {correctAnswer && (
+                        <p className="text-sm mt-1">
+                          The correct answer was: <strong>{correctAnswer}</strong>
+                        </p>
+                      )}
+                      {correctAnswer && /[æøå]/i.test(correctAnswer) && (
+                        <p className="text-xs mt-1 opacity-75 flex items-center justify-center gap-1">
+                          <LightBulbIcon className="w-4 h-4" />
+                          Tip: You can type &quot;ae&quot; for &quot;æ&quot;, &quot;o&quot; for
+                          &quot;ø&quot;, &quot;a&quot; for &quot;å&quot;
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  <p className="hidden sm:block text-xs mt-2 opacity-75">
+                    Press{' '}
+                    <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">Enter</kbd>{' '}
+                    to continue
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {additionalFeedback && showResult && additionalFeedback}
+
+          {/* Desktop/tablet action row */}
+          <div className="hidden sm:flex justify-between items-center">
+            <div></div>
+            {!showResult ? (
+              <Button
+                color="primary"
+                onPress={onSubmit}
+                isDisabled={!userInput.trim() || isProcessing}
+                isLoading={isProcessing}
+              >
+                Submit Answer <kbd className="ml-1 bg-white/20 px-1 rounded text-xs">Enter</kbd>
+              </Button>
+            ) : (
+              <Button color="primary" onPress={onNext}>
+                Next Question
+              </Button>
+            )}
+          </div>
+        </CardBody>
+      </Card>
+      {/* Mobile sticky action bar */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          {showResult && canUndo && onUndo ? (
+            <Button variant="bordered" onPress={onUndo} className="min-w-[110px]">
+              Undo
+            </Button>
+          ) : (
+            <div></div>
+          )}
+
           {!showResult ? (
             <Button
               color="primary"
               onPress={onSubmit}
               isDisabled={!userInput.trim() || isProcessing}
               isLoading={isProcessing}
+              className="min-w-[140px]"
             >
-              Submit Answer <kbd className="ml-1 bg-white/20 px-1 rounded text-xs">Enter</kbd>
+              Submit
             </Button>
           ) : (
-            <Button color="primary" onPress={onNext}>
-              Next Question
+            <Button color="primary" onPress={onNext} className="min-w-[140px]">
+              Next
             </Button>
           )}
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </>
   );
 }

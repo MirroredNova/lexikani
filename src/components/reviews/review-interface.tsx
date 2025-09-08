@@ -5,7 +5,8 @@ import { Button } from '@heroui/button';
 import { Card, CardBody } from '@heroui/card';
 import type { ReviewItem, ReviewQuestion, ReviewPair, Language } from '@/types';
 import { reviewWord } from '@/lib/server/vocabulary.actions';
-import { ProgressBar, QuestionCard, VocabularyCard, VocabularyNotes } from '@/components/shared';
+import { ProgressBar, QuestionCard, SessionHeader } from '@/components/shared';
+import WordDetailsPanel from '@/components/shared/word-details-panel';
 import { CheckCircleIcon, ArrowPathIcon, HomeIcon } from '@heroicons/react/24/outline';
 import {
   fuzzyMatchText,
@@ -303,20 +304,16 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onPress={() => window.history.back()}>
-          ← Back to Home
-        </Button>
-        <div className="text-center">
-          <h2 className="text-xl font-semibold">Review Session</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {initialReviews.length} words • {totalQuestions} questions
-          </p>
-        </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {correctAnswers}/{questionsAnswered} correct
-        </div>
-      </div>
+      <SessionHeader
+        title="Review Session"
+        subtitle={`${initialReviews.length} words • ${totalQuestions} questions`}
+        onBack={() => window.history.back()}
+        rightContent={
+          <span>
+            {correctAnswers}/{questionsAnswered} correct
+          </span>
+        }
+      />
 
       <ProgressBar progress={progress} color="primary" />
 
@@ -333,6 +330,8 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
         isCorrect={lastAnswer?.wasCorrect ?? false}
         correctAnswer={currentQuestion.correctAnswer}
         isProcessing={isProcessing}
+        canUndo={canUndo}
+        onUndo={handleUndo}
         wordData={{
           word: currentQuestion.item.word,
           meaning: currentQuestion.item.meaning,
@@ -346,29 +345,15 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
           showResult && (
             <>
               {showWordDetails && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-4">
-                  <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-3">
-                    Word Details
-                  </h4>
-                  <VocabularyCard
-                    id={currentQuestion.item.id}
-                    word={currentQuestion.item.word}
-                    meaning={currentQuestion.item.meaning}
-                    type={currentQuestion.item.type}
-                    level={currentQuestion.item.level}
-                    attributes={currentQuestion.item.attributes}
-                    srsStage={currentQuestion.item.srsStage}
-                    variant="simple"
-                  />
-                  <div className="flex justify-center pt-2">
-                    <VocabularyNotes
-                      vocabularyId={currentQuestion.item.id}
-                      word={currentQuestion.item.word}
-                      variant="button"
-                      size="sm"
-                    />
-                  </div>
-                </div>
+                <WordDetailsPanel
+                  id={currentQuestion.item.id}
+                  word={currentQuestion.item.word}
+                  meaning={currentQuestion.item.meaning}
+                  type={currentQuestion.item.type}
+                  level={currentQuestion.item.level}
+                  attributes={currentQuestion.item.attributes}
+                  srsStage={currentQuestion.item.srsStage}
+                />
               )}
               {showPairResult && (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">

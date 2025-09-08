@@ -14,7 +14,7 @@ import Flashcard from '@/components/lessons/flashcard';
 import QuizSection from '@/components/lessons/quiz-section';
 import { completeLesson, getAvailableLessons } from '@/lib/server/vocabulary.actions';
 import { getUserSelectedLanguage } from '@/lib/server/user.actions';
-import { ProgressBar } from '@/components/shared';
+import { ProgressBar, SessionHeader } from '@/components/shared';
 
 type LessonPhase = 'learning' | 'quiz' | 'complete';
 
@@ -258,19 +258,20 @@ export default function LessonsInterface({ initialLessons, language }: LessonsIn
 
   // Learning phase
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">
-          Card {currentCardIndex + 1} of {currentLessons.length}
-        </h2>
-      </div>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <SessionHeader
+        title="Lesson"
+        subtitle={`Card ${currentCardIndex + 1} of ${currentLessons.length}`}
+        showBackButton={false}
+      />
 
       <ProgressBar progress={progress} color="primary" />
 
       <Flashcard word={currentLessons[currentCardIndex]} />
 
       <div className="space-y-4">
-        <div className="flex gap-4 justify-center">
+        {/* Desktop/tablet controls */}
+        <div className="hidden sm:flex gap-4 justify-center">
           <Button variant="bordered" onPress={handlePrevCard} isDisabled={currentCardIndex === 0}>
             Previous
           </Button>
@@ -279,11 +280,28 @@ export default function LessonsInterface({ initialLessons, language }: LessonsIn
           </Button>
         </div>
 
-        <div className="text-center text-xs text-gray-500 dark:text-gray-400">
+        <div className="hidden sm:block text-center text-xs text-gray-500 dark:text-gray-400">
           Use <kbd className="bg-gray-200 dark:bg-gray-600 px-1 rounded text-xs">Left</kbd>{' '}
           <kbd className="bg-gray-200 dark:bg-gray-600 px-1 rounded text-xs">Right</kbd> arrow keys
           or <kbd className="bg-gray-200 dark:bg-gray-600 px-1 rounded text-xs">Space</kbd> to
           navigate
+        </div>
+      </div>
+
+      {/* Mobile sticky controls */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <Button
+            variant="bordered"
+            onPress={handlePrevCard}
+            isDisabled={currentCardIndex === 0}
+            className="min-w-[110px]"
+          >
+            Previous
+          </Button>
+          <Button color="primary" onPress={handleNextCard} className="min-w-[140px]">
+            {currentCardIndex === currentLessons.length - 1 ? 'Start Quiz' : 'Next'}
+          </Button>
         </div>
       </div>
     </div>

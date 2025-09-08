@@ -21,7 +21,7 @@ export default function SessionHeader({
   return (
     <div className="flex items-center justify-between">
       {showBackButton ? (
-        <Button variant="ghost" onPress={onBack}>
+        <Button variant="ghost" size="sm" className="px-2" onPress={onBack}>
           {backButtonText}
         </Button>
       ) : (
