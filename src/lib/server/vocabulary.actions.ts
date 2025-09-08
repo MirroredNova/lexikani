@@ -232,7 +232,7 @@ export async function startLearningWord(vocabularyId: number) {
   await ensureUserExists(user.id, user.email || '');
 
   const now = new Date();
-  const nextReview = new Date(now.getTime() + SRS_INTERVALS[0] * 60 * 60 * 1000); // 4 hours
+  const nextReview = new Date(now.getTime() + SRS_INTERVALS[1] * 60 * 60 * 1000); // 4 hours (SRS 1 interval)
 
   // Insert userVocabulary record (only if it doesn't exist)
   const existingUserWord = await db.query.userVocabulary.findFirst({
@@ -243,7 +243,7 @@ export async function startLearningWord(vocabularyId: number) {
     await db.insert(userVocabulary).values({
       userId: user.id,
       vocabularyId: vocabularyId,
-      srsStage: 0,
+      srsStage: 1, // Start at SRS 1 (Apprentice I) after demonstrating knowledge
       nextReviewAt: nextReview,
       unlockedAt: now,
     });
@@ -271,13 +271,13 @@ export async function reviewWord(vocabularyId: number, correct: boolean) {
   let nextReviewAt: Date | null = null;
 
   if (correct) {
-    // Move to next SRS stage (max 8)
-    if (newSrsStage < 8) {
+    // Move to next SRS stage (max 9)
+    if (newSrsStage < 9) {
       newSrsStage++;
     }
   } else {
-    // Reset to Apprentice 1 (stage 0) on incorrect answer
-    newSrsStage = 0;
+    // Reset to Apprentice 1 (stage 1) on incorrect answer
+    newSrsStage = 1;
   }
 
   // Calculate next review time
@@ -309,7 +309,7 @@ export async function completeLesson(vocabularyIds: number[]) {
   await ensureUserExists(user.id, user.email || '');
 
   const now = new Date();
-  const nextReview = new Date(now.getTime() + SRS_INTERVALS[0] * 60 * 60 * 1000); // 4 hours
+  const nextReview = new Date(now.getTime() + SRS_INTERVALS[1] * 60 * 60 * 1000); // 4 hours (SRS 1 interval)
   let wordsUnlocked = 0;
 
   // Unlock all words from the completed lesson
@@ -323,7 +323,7 @@ export async function completeLesson(vocabularyIds: number[]) {
       await db.insert(userVocabulary).values({
         userId: user.id,
         vocabularyId: vocabularyId,
-        srsStage: 0,
+        srsStage: 1, // Start at SRS 1 (Apprentice I) since they proved knowledge in lesson
         nextReviewAt: nextReview,
         unlockedAt: now,
       });

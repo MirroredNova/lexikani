@@ -1,11 +1,11 @@
 export const SRS_INTERVALS = {
-  0: 4, // Apprentice 1 -> 4 hours
-  1: 8, // Apprentice 2 -> 8 hours
-  2: 24, // Apprentice 3 -> 1 day
-  3: 72, // Apprentice 4 -> 3 days
-  4: 168, // Guru 1 -> 1 week
-  5: 336, // Guru 2 -> 2 weeks
-  6: 720, // Master -> 1 month
-  7: 2160, // Enlightened -> 3 months
-  8: null, // Burned -> never review again
+  1: 4, // Apprentice I (lesson completed or failed review) -> 4 hours
+  2: 8, // Apprentice II -> 8 hours
+  3: 24, // Apprentice III -> 1 day
+  4: 72, // Guru I -> 3 days
+  5: 168, // Guru II -> 1 week
+  6: 336, // Master I -> 2 weeks
+  7: 720, // Master II -> 1 month
+  8: 2160, // Enlightened -> 3 months
+  9: null, // Burned -> never review again
 } as const;

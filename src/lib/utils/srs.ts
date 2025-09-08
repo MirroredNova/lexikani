@@ -11,23 +11,23 @@ export function getSrsStageInfo(stage: number | null): SrsStageInfo {
   if (stage === null) return { name: 'Not Learned', color: 'default' };
 
   switch (stage) {
-    case 0:
-      return { name: 'Apprentice 1', color: 'danger' };
     case 1:
-      return { name: 'Apprentice 2', color: 'danger' };
+      return { name: 'Apprentice I', color: 'danger' };
     case 2:
-      return { name: 'Apprentice 3', color: 'danger' };
+      return { name: 'Apprentice II', color: 'danger' };
     case 3:
-      return { name: 'Apprentice 4', color: 'danger' };
+      return { name: 'Apprentice III', color: 'danger' };
     case 4:
-      return { name: 'Guru 1', color: 'warning' };
+      return { name: 'Guru I', color: 'warning' };
     case 5:
-      return { name: 'Guru 2', color: 'warning' };
+      return { name: 'Guru II', color: 'warning' };
     case 6:
-      return { name: 'Master', color: 'primary' };
+      return { name: 'Master I', color: 'primary' };
     case 7:
-      return { name: 'Enlightened', color: 'secondary' };
+      return { name: 'Master II', color: 'primary' };
     case 8:
+      return { name: 'Enlightened', color: 'secondary' };
+    case 9:
       return { name: 'Burned', color: 'success' };
     default:
       return { name: 'Unknown', color: 'default' };
@@ -55,6 +55,6 @@ export function getSrsStageCategory(stage: number | null): string {
   if (stage === null) return 'not-learned';
   if (stage <= 3) return 'apprentice';
   if (stage <= 5) return 'guru';
-  if (stage <= 7) return 'master-enlightened';
+  if (stage <= 8) return 'master-enlightened';
   return 'burned';
 }
