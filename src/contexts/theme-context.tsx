@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -23,20 +23,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('dark');
 
   // Get system theme preference
-  const getSystemTheme = (): 'light' | 'dark' => {
+  const getSystemTheme = useCallback((): 'light' | 'dark' => {
     if (typeof window !== 'undefined') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
     return 'dark';
-  };
+  }, []);
 
   // Calculate actual theme based on preference
-  const calculateActualTheme = (themePreference: Theme): 'light' | 'dark' => {
-    if (themePreference === 'system') {
-      return getSystemTheme();
-    }
-    return themePreference;
-  };
+  const calculateActualTheme = useCallback(
+    (themePreference: Theme): 'light' | 'dark' => {
+      if (themePreference === 'system') {
+        return getSystemTheme();
+      }
+      return themePreference;
+    },
+    [getSystemTheme],
+  );
 
   // Apply theme to document
   const applyTheme = (newTheme: 'light' | 'dark') => {
@@ -55,7 +58,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(initialTheme);
     const resolvedTheme = calculateActualTheme(initialTheme);
     applyTheme(resolvedTheme);
-  }, []);
+  }, [calculateActualTheme]);
 
   // Listen for system theme changes when using system preference
   useEffect(() => {
@@ -69,7 +72,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     mediaQuery.addEventListener('change', handleSystemThemeChange);
     return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
-  }, [theme]);
+  }, [theme, getSystemTheme]);
 
   const handleSetTheme = (newTheme: Theme) => {
     setTheme(newTheme);

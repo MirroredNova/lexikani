@@ -7,7 +7,7 @@ import {
 } from '@/lib/server/vocabulary.actions';
 import { getUserSelectedLanguage } from '@/lib/server/user.actions';
 import ReviewSchedule from '@/components/home/review-schedule';
-import { LevelProgressCard, ActionCard } from '@/components/shared';
+import { LevelProgressCard, ActionCard, TimezoneDebug } from '@/components/shared';
 
 export default async function Page() {
   const selectedLanguage = await getUserSelectedLanguage();
@@ -65,8 +65,17 @@ export default async function Page() {
       </div>
 
       {/* Review Schedule */}
-      <div className="mt-6">
+      <div className="mt-6 space-y-4">
         <ReviewSchedule schedule={reviewSchedule} />
+
+        {/* Temporary Debug Component - Remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="flex justify-center">
+            <div className="max-w-md">
+              <TimezoneDebug />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

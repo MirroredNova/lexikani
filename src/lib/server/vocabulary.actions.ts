@@ -90,6 +90,7 @@ export async function getReviewSchedule(languageId: number) {
   const user = await getCurrentUser();
   await ensureUserExists(user.id, user.email || '');
 
+  // Use UTC for consistent server-side calculations
   const now = new Date();
 
   // Get all reviews for the next 7 days
@@ -112,11 +113,12 @@ export async function getReviewSchedule(languageId: number) {
     );
 
   // Create hourly schedule for next 48 hours (2 days)
+  // Return schedule with UTC timestamps - client will handle timezone conversion
   const schedule: Array<{ hour: Date; count: number }> = [];
   for (let i = 0; i < 48; i++) {
     const hour = new Date(now.getTime() + i * 60 * 60 * 1000);
-    // Round down to the start of the hour
-    hour.setMinutes(0, 0, 0);
+    // Round down to the start of the hour in UTC
+    hour.setUTCMinutes(0, 0, 0);
 
     schedule.push({
       hour,

@@ -146,39 +146,39 @@ export default function LessonsInterface({ initialLessons, language }: LessonsIn
 
   if (currentPhase === 'complete') {
     return (
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3">
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center">
             <div className="p-3 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full">
               <SparklesIcon className="w-8 h-8 text-white" />
             </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Lesson Complete!</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Great job learning new Norwegian vocabulary!
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-bold">Lesson Complete!</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
+              Great job learning new {language.name} vocabulary!
             </p>
           </div>
         </div>
 
         {/* Cards Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Words Added Card */}
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 border-blue-200 dark:border-blue-800">
-            <CardBody className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-blue-500 rounded-lg">
-                  <CheckCircleIcon className="w-6 h-6 text-white" />
+            <CardBody className="p-4 sm:p-6">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="p-2 bg-blue-500 rounded-lg flex-shrink-0">
+                  <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm sm:text-base">
                     Words Added to Reviews
                   </h3>
-                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-2">
+                  <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300 mb-2">
                     {currentLessons.length}
                   </p>
-                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                  <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
                     Ready for spaced repetition review
                   </p>
                 </div>
@@ -189,22 +189,22 @@ export default function LessonsInterface({ initialLessons, language }: LessonsIn
           {/* Quiz Results Card */}
           {quizResults && (
             <Card className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/30 border-pink-200 dark:border-pink-800">
-              <CardBody className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 bg-pink-500 rounded-lg">
-                    <BookOpenIcon className="w-6 h-6 text-white" />
+              <CardBody className="p-4 sm:p-6">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="p-2 bg-pink-500 rounded-lg flex-shrink-0">
+                    <BookOpenIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-pink-900 dark:text-pink-100 mb-1">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-pink-900 dark:text-pink-100 mb-1 text-sm sm:text-base">
                       Quiz Results
                     </h3>
-                    <p className="text-2xl font-bold text-pink-700 dark:text-pink-300 mb-1">
+                    <p className="text-xl sm:text-2xl font-bold text-pink-700 dark:text-pink-300 mb-1">
                       {Math.round(
                         (quizResults.firstAttemptCorrect / quizResults.totalQuestions) * 100,
                       )}
                       %
                     </p>
-                    <p className="text-sm text-pink-600 dark:text-pink-400 mb-2">
+                    <p className="text-xs sm:text-sm text-pink-600 dark:text-pink-400 mb-2">
                       {quizResults.firstAttemptCorrect} out of {quizResults.totalQuestions} correct
                     </p>
                     {quizResults.firstAttemptCorrect < quizResults.totalQuestions && (
@@ -221,21 +221,23 @@ export default function LessonsInterface({ initialLessons, language }: LessonsIn
 
         {/* Additional Info */}
         <Card>
-          <CardBody className="p-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-              <SparklesIcon className="w-4 h-4 inline mr-1" />
-              Tested both {language.name}→English and English→{language.name} for each word
+          <CardBody className="p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center flex items-center justify-center gap-1">
+              <SparklesIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span>
+                Tested both {language.name}→English and English→{language.name} for each word
+              </span>
             </p>
           </CardBody>
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
           <Button
             color="primary"
             size="lg"
             onPress={handleStartNewLesson}
-            className="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700"
+            className="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 min-h-[48px]"
             isLoading={isLoadingNewLessons}
             endContent={<ArrowRightIcon className="w-4 h-4" />}
           >
@@ -245,7 +247,7 @@ export default function LessonsInterface({ initialLessons, language }: LessonsIn
             variant="bordered"
             size="lg"
             onPress={() => window.history.back()}
-            className="sm:w-40"
+            className="sm:w-40 min-h-[48px]"
           >
             Back to Home
           </Button>
