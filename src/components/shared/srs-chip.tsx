@@ -18,12 +18,14 @@ export default function SrsChip({
   const srsInfo = getSrsStageInfo(srsStage);
 
   return (
-    <div className="space-y-1">
+    <div className="flex items-center gap-2">
       <Chip size={size} color={srsInfo.color} variant={variant}>
         {srsInfo.name}
       </Chip>
       {showStageNumber && srsStage !== null && (
-        <div className="text-xs text-gray-500 dark:text-gray-500">Stage {srsStage}</div>
+        <span className="text-xs text-gray-500 dark:text-gray-500 whitespace-nowrap">
+          L{srsStage}
+        </span>
       )}
     </div>
   );

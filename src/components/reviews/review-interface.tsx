@@ -40,6 +40,9 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
     showPairResult: boolean;
   } | null>(null);
   const [showWordDetails, setShowWordDetails] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState<{
+    pairId: string;
+  } | null>(null);
 
   useEffect(() => {
     const { questions: shuffledQuestions, pairs } = generateReviewQuestions(initialReviews);
@@ -53,27 +56,46 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
   const progress = calculateProgress(questionsAnswered, totalQuestions);
 
   const handleNextQuestion = useCallback(() => {
-    // Disable undo when moving to next question
+    // Disable undo
     setCanUndo(false);
 
-    // Don't clear lastAnswer on final question to preserve visual feedback
+    // Advance first so the next word mounts immediately
     if (currentQuestionIndex < questions.length - 1) {
-      setLastAnswer(null);
-    }
-
-    setShowWordDetails(false);
-
-    if (currentQuestionIndex < questions.length - 1) {
-      // Move to next question
       setCurrentQuestionIndex(prev => prev + 1);
-      setUserInput('');
-      setShowResult(false);
-      setShowPairResult(false);
     } else {
-      // Review session complete
       setReviewComplete(true);
     }
-  }, [currentQuestionIndex, questions.length]);
+
+    // Then reset transient UI state
+    setShowResult(false);
+    setShowPairResult(false);
+    setShowWordDetails(false);
+    setLastAnswer(null);
+    setUserInput('');
+
+    // Commit any pending SRS update in the background to avoid blocking UI
+    const update = pendingUpdate;
+    if (update) {
+      (async () => {
+        try {
+          const pair = reviewPairs.get(update.pairId);
+          if (pair) {
+            const bothCorrect = pair.wordToMeaning === true && pair.meaningToWord === true;
+            const vocabId = pair.item.id;
+            const res = await reviewWord(vocabId, bothCorrect);
+            const from = pair.srsProgression?.from ?? pair.item.srsStage;
+            const to = res.newSrsStage;
+            pair.srsProgression = { from, to };
+            pair.item.srsStage = to;
+          }
+        } catch (error) {
+          console.error('Error updating review:', error);
+        } finally {
+          setPendingUpdate(null);
+        }
+      })();
+    }
+  }, [currentQuestionIndex, questions.length, pendingUpdate, reviewPairs]);
 
   const handleShowDetails = useCallback(() => {
     setShowWordDetails(prev => !prev);
@@ -90,6 +112,7 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
     setShowPairResult(lastAnswer.showPairResult);
     setCanUndo(false);
     setLastAnswer(null);
+    setPendingUpdate(null);
   }, [canUndo, lastAnswer]);
 
   const handleSubmitAnswer = async () => {
@@ -150,26 +173,21 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
     const bothAnswered = pair.wordToMeaning !== null && pair.meaningToWord !== null;
     const bothCorrect = pair.wordToMeaning === true && pair.meaningToWord === true;
 
-    if (bothAnswered && !pair.completed) {
-      // Complete the pair and update SRS
+    if (bothAnswered) {
+      // Mark completed for UI and preview SRS change; always refresh pending update
       pair.completed = true;
 
-      try {
-        const originalSrsStage = currentQuestion.item.srsStage;
-        await reviewWord(currentQuestion.item.id, bothCorrect);
-
-        // Calculate the new SRS stage for display
-        let newSrsStage: number;
-        if (bothCorrect) {
-          newSrsStage = Math.min(originalSrsStage + 1, 8);
-        } else {
-          newSrsStage = 0; // Reset to apprentice 1
-        }
-
-        pair.srsProgression = { from: originalSrsStage, to: newSrsStage };
-      } catch (error) {
-        console.error('Error updating review:', error);
+      const originalSrsStage = currentQuestion.item.srsStage;
+      let newSrsStage: number;
+      if (bothCorrect) {
+        newSrsStage = Math.min(originalSrsStage + 1, 8);
+      } else {
+        // Reset to Apprentice I (stage 1), never to 0
+        newSrsStage = 1;
       }
+
+      pair.srsProgression = { from: originalSrsStage, to: newSrsStage };
+      setPendingUpdate({ pairId });
     }
 
     setReviewPairs(updatedPairs);
@@ -372,7 +390,9 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
                         <p className="text-sm text-green-600 dark:text-green-300 mt-1">
                           {bothCorrect
                             ? `SRS: ${from} to ${to}${to === 8 ? ' (Burned!)' : ''}`
-                            : `SRS: ${from} to ${to} (Reset to Apprentice)`}
+                            : from <= 1
+                              ? 'SRS: remains at 1 (Apprentice I)'
+                              : `SRS: ${from} to 1 (Reset to Apprentice I)`}
                         </p>
                         <p className="text-xs text-green-500 dark:text-green-400 mt-1">
                           Both directions must be correct to progress

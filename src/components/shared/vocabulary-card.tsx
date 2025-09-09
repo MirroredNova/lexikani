@@ -64,9 +64,9 @@ export default function VocabularyCard({
   return (
     <Card className="hover:shadow-md transition-all duration-200">
       <CardBody className="p-4">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Main Content - Word & Meaning */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 basis-full sm:basis-auto">
             <div className="flex items-baseline gap-2 mb-1">
               <h4 className="text-lg font-semibold text-primary truncate">{word}</h4>
               <Chip size="sm" color="primary" variant="flat" className="shrink-0">
@@ -81,7 +81,7 @@ export default function VocabularyCard({
           </div>
 
           {/* SRS & Status */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto sm:ml-auto mt-1 sm:mt-0">
             <SrsChip srsStage={srsStage ?? null} showStageNumber={false} size="sm" />
 
             {/* Next Review - compact */}

@@ -51,46 +51,73 @@ export default function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-center gap-2 mt-6">
-      <Button
-        variant="flat"
-        size="sm"
-        isDisabled={!hasPreviousPage}
-        onPress={() => onPageChange(currentPage - 1)}
-        startContent={<ChevronLeftIcon className="w-4 h-4" />}
-      >
-        Previous
-      </Button>
-
-      <div className="flex items-center gap-1">
-        {getPageNumbers().map((page, index) => (
-          <React.Fragment key={index}>
-            {page === '...' ? (
-              <span className="px-2 py-1 text-sm text-gray-500">...</span>
-            ) : (
-              <Button
-                variant={page === currentPage ? 'solid' : 'light'}
-                color={page === currentPage ? 'primary' : 'default'}
-                size="sm"
-                onPress={() => onPageChange(page as number)}
-                className="min-w-unit-10"
-              >
-                {page}
-              </Button>
-            )}
-          </React.Fragment>
-        ))}
+    <>
+      {/* Mobile: compact controls to avoid overflow */}
+      <div className="flex sm:hidden items-center justify-between gap-2 mt-6 w-full">
+        <Button
+          variant="flat"
+          size="sm"
+          isDisabled={!hasPreviousPage}
+          onPress={() => onPageChange(currentPage - 1)}
+          startContent={<ChevronLeftIcon className="w-4 h-4" />}
+        >
+          Prev
+        </Button>
+        <span className="text-xs text-gray-600 dark:text-gray-400">
+          Page {currentPage} / {totalPages}
+        </span>
+        <Button
+          variant="flat"
+          size="sm"
+          isDisabled={!hasNextPage}
+          onPress={() => onPageChange(currentPage + 1)}
+          endContent={<ChevronRightIcon className="w-4 h-4" />}
+        >
+          Next
+        </Button>
       </div>
 
-      <Button
-        variant="flat"
-        size="sm"
-        isDisabled={!hasNextPage}
-        onPress={() => onPageChange(currentPage + 1)}
-        endContent={<ChevronRightIcon className="w-4 h-4" />}
-      >
-        Next
-      </Button>
-    </div>
+      {/* Desktop/tablet: full pagination */}
+      <div className="hidden sm:flex items-center justify-center gap-2 mt-6">
+        <Button
+          variant="flat"
+          size="sm"
+          isDisabled={!hasPreviousPage}
+          onPress={() => onPageChange(currentPage - 1)}
+          startContent={<ChevronLeftIcon className="w-4 h-4" />}
+        >
+          Previous
+        </Button>
+
+        <div className="flex items-center gap-1 flex-wrap">
+          {getPageNumbers().map((page, index) => (
+            <React.Fragment key={index}>
+              {page === '...' ? (
+                <span className="px-2 py-1 text-sm text-gray-500">...</span>
+              ) : (
+                <Button
+                  variant={page === currentPage ? 'solid' : 'light'}
+                  color={page === currentPage ? 'primary' : 'default'}
+                  size="sm"
+                  onPress={() => onPageChange(page as number)}
+                >
+                  {page}
+                </Button>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+
+        <Button
+          variant="flat"
+          size="sm"
+          isDisabled={!hasNextPage}
+          onPress={() => onPageChange(currentPage + 1)}
+          endContent={<ChevronRightIcon className="w-4 h-4" />}
+        >
+          Next
+        </Button>
+      </div>
+    </>
   );
 }
