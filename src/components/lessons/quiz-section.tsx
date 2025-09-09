@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useCallback } from 'react';
-import { ArrowRightIcon } from '@heroicons/react/24/outline';
-import type { VocabularyItem, Language, ReviewItem } from '@/types';
+// import { Button } from '@heroui/button';
+import type { VocabularyItem, Language } from '@/types';
 import { ProgressBar, QuestionCard, SessionHeader } from '@/components/shared';
 import WordDetailsPanel from '@/components/shared/word-details-panel';
-import { calculateProgress, fuzzyMatchText, generateAcceptableAnswers } from '@/lib/utils';
-import { useReviewState } from '@/hooks/use-review-state';
+import { calculateProgress } from '@/lib/utils';
+import { useQuizState } from '@/hooks/use-quiz-state';
 
 interface QuizSectionProps {
   words: VocabularyItem[];
@@ -20,34 +20,24 @@ interface QuizSectionProps {
 }
 
 export default function QuizSection({ words, onComplete, onBack, language }: QuizSectionProps) {
-  // Convert vocabulary items to review items format (lessons start at SRS stage 0)
-  const reviewItems: ReviewItem[] = useMemo(
-    () =>
-      words.map(word => ({
-        ...word, // Include all VocabularyItem properties
-        srsStage: 0, // Lessons don't have SRS progression yet
-        nextReviewAt: null,
-      })),
-    [words],
-  );
-
-  // Use review state management (same as reviews)
+  // Use custom hook for state management
   const {
     // State
+    questions,
     userInput,
     showResult,
-    correctAnswers,
     totalQuestions,
-    reviewComplete,
+    firstAttemptCorrect,
+    isRetestPhase,
     canUndo,
+    lastAnswer,
     showWordDetails,
     currentQuestion,
     questionsAnswered,
-    completedPairs,
-    showPairResult,
+    quizComplete,
     // Actions
     actions,
-  } = useReviewState(reviewItems);
+  } = useQuizState(words);
 
   // Derived progress calculation
   const progress = useMemo(
@@ -55,44 +45,26 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
     [questionsAnswered, totalQuestions],
   );
 
-  // Handle lesson completion (when all pairs are completed)
-  useEffect(() => {
-    if (reviewComplete) {
-      // Calculate firstAttemptCorrect for compatibility with lesson interface
-      // This is a simplified calculation since we're now using pair-based logic
-      const firstAttemptCorrect = Math.round(correctAnswers * 0.8); // Rough estimate
+  // Handle quiz completion and navigation
+  const handleNextQuestion = useCallback(() => {
+    actions.nextQuestion();
+  }, [actions]);
 
+  const handleSubmitAnswer = useCallback(() => {
+    if (!userInput.trim() || !currentQuestion) return;
+    actions.submitAnswer(currentQuestion, userInput);
+  }, [userInput, currentQuestion, actions]);
+
+  // Handle quiz completion
+  useEffect(() => {
+    if (quizComplete) {
       onComplete({
         firstAttemptCorrect,
         totalQuestions,
         allQuestionsCompleted: true,
       });
     }
-  }, [reviewComplete, correctAnswers, totalQuestions, onComplete]);
-
-  const handleSubmitAnswer = useCallback(() => {
-    if (!userInput.trim() || !currentQuestion) return;
-
-    // Use the same submit logic as reviews
-    actions.submitAnswer(currentQuestion, userInput);
-  }, [userInput, currentQuestion, actions]);
-
-  const handleNextQuestion = useCallback(() => {
-    actions.nextQuestion();
-  }, [actions]);
-
-  // Check if answer is correct (for UI display)
-  const checkAnswer = useCallback(
-    (userInput: string, correctAnswer: string) => {
-      if (currentQuestion?.direction === 'word-to-meaning') {
-        const acceptableAnswers =
-          currentQuestion.item.acceptedAnswers || generateAcceptableAnswers(correctAnswer);
-        return fuzzyMatchText(userInput, correctAnswer, acceptableAnswers);
-      }
-      return fuzzyMatchText(userInput, correctAnswer);
-    },
-    [currentQuestion],
-  );
+  }, [quizComplete, firstAttemptCorrect, totalQuestions, onComplete]);
 
   // Handle backspace key for undo
   useEffect(() => {
@@ -114,10 +86,10 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
     };
   }, [canUndo, showResult, actions]);
 
-  if (totalQuestions === 0) {
+  if (questions.length === 0) {
     return (
       <div className="text-center">
-        <p>Loading lesson...</p>
+        <p>Loading quiz...</p>
       </div>
     );
   }
@@ -133,22 +105,22 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <SessionHeader
-        title="Lesson Quiz"
-        subtitle={`${words.length} words • ${totalQuestions} questions`}
+        title={isRetestPhase ? 'Retest Phase' : 'Quiz Time!'}
+        subtitle={`${words.length} words • ${totalQuestions} questions${isRetestPhase ? ' (reviewing incorrect answers)' : ''}`}
+        backButtonText="← Back to Lesson"
         onBack={onBack}
         rightContent={
-          <div className="text-right text-sm">
-            <div>
-              {correctAnswers}/{questionsAnswered} correct
-            </div>
-            <div className="text-xs opacity-75">
-              {completedPairs}/{words.length} pairs done
-            </div>
-          </div>
+          isRetestPhase ? (
+            'Retesting...'
+          ) : (
+            <span>
+              {firstAttemptCorrect}/{Math.min(questionsAnswered, totalQuestions)} correct
+            </span>
+          )
         }
       />
 
-      <ProgressBar progress={progress} color="primary" />
+      <ProgressBar progress={progress} color="secondary" />
 
       <QuestionCard
         questionNumber={questionsAnswered}
@@ -156,52 +128,34 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
         question={currentQuestion.question}
         direction={currentQuestion.direction}
         userInput={userInput}
-        showResult={showResult}
-        correctAnswer={currentQuestion.correctAnswer}
         onInputChange={actions.setUserInput}
         onSubmit={handleSubmitAnswer}
         onNext={handleNextQuestion}
-        onUndo={actions.undoAnswer}
-        canUndo={canUndo}
-        isCorrect={showResult && checkAnswer(userInput, currentQuestion.correctAnswer)}
+        showResult={showResult}
+        isCorrect={showResult ? (lastAnswer?.wasCorrect ?? false) : false}
+        correctAnswer={currentQuestion.correctAnswer}
+        showRetestIndicator={isRetestPhase}
         wordData={{
-          word: currentQuestion.item.word,
-          meaning: currentQuestion.item.meaning,
-          type: currentQuestion.item.type,
-          level: currentQuestion.item.level,
-          attributes: currentQuestion.item.attributes,
+          word: currentQuestion.word.word,
+          meaning: currentQuestion.word.meaning,
+          type: currentQuestion.word.type,
+          level: currentQuestion.word.level,
+          attributes: currentQuestion.word.attributes,
         }}
         onShowDetails={actions.toggleWordDetails}
         language={language}
         additionalFeedback={
-          <>
-            {showWordDetails && (
-              <WordDetailsPanel
-                id={currentQuestion.item.id}
-                word={currentQuestion.item.word}
-                meaning={currentQuestion.item.meaning}
-                type={currentQuestion.item.type}
-                level={currentQuestion.item.level}
-                attributes={currentQuestion.item.attributes}
-              />
-            )}
-            {showPairResult && (
-              <div className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 border rounded-lg p-4">
-                <div className="text-center">
-                  <p className="text-sm mt-1 text-green-600 dark:text-green-300">
-                    <span className="inline-flex items-center gap-2">
-                      <span>Pair Complete!</span>
-                      <ArrowRightIcon
-                        className="w-4 h-4 text-green-600 dark:text-green-300"
-                        aria-hidden="true"
-                      />
-                      <span>Added to vocabulary</span>
-                    </span>
-                  </p>
-                </div>
-              </div>
-            )}
-          </>
+          showResult &&
+          showWordDetails && (
+            <WordDetailsPanel
+              id={currentQuestion.word.id}
+              word={currentQuestion.word.word}
+              meaning={currentQuestion.word.meaning}
+              type={currentQuestion.word.type}
+              level={currentQuestion.word.level}
+              attributes={currentQuestion.word.attributes}
+            />
+          )
         }
       />
     </div>
