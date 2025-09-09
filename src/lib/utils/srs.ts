@@ -1,4 +1,5 @@
 import type { SrsStageInfo } from '@/types';
+import { SRS_INTERVALS } from '@/constants/vocabulary.constants';
 
 /**
  * SRS (Spaced Repetition System) utilities
@@ -35,26 +36,40 @@ export function getSrsStageInfo(stage: number | null): SrsStageInfo {
 }
 
 /**
- * Check if an SRS stage represents a mastered word (Guru level or higher)
+ * Calculate the next SRS stage and review time optimistically (same logic as server)
+ * Used for optimistic updates in review submissions
  */
-export function isMasteredSrsStage(stage: number | null): boolean {
-  return stage !== null && stage >= 4;
-}
+export function calculateOptimisticSrsUpdate(
+  currentSrsStage: number,
+  correct: boolean,
+): {
+  newSrsStage: number;
+  nextReviewAt: Date | null;
+} {
+  const now = new Date();
+  let newSrsStage = currentSrsStage;
 
-/**
- * Check if an SRS stage represents a burned (fully learned) word
- */
-export function isBurnedSrsStage(stage: number | null): boolean {
-  return stage === 8;
-}
+  if (correct) {
+    // Move to next SRS stage (max 9)
+    if (newSrsStage < 9) {
+      newSrsStage++;
+    }
+  } else {
+    // Reset to Apprentice 1 (stage 1) on incorrect answer
+    newSrsStage = 1;
+  }
 
-/**
- * Get the category of an SRS stage for filtering
- */
-export function getSrsStageCategory(stage: number | null): string {
-  if (stage === null) return 'not-learned';
-  if (stage <= 3) return 'apprentice';
-  if (stage <= 5) return 'guru';
-  if (stage <= 8) return 'master-enlightened';
-  return 'burned';
+  // Calculate next review time
+  const intervalHours = SRS_INTERVALS[newSrsStage as keyof typeof SRS_INTERVALS];
+  let nextReviewAt: Date | null = null;
+
+  if (intervalHours !== null) {
+    nextReviewAt = new Date(now.getTime() + intervalHours * 60 * 60 * 1000);
+  }
+  // If intervalHours is null (burned), nextReviewAt stays null
+
+  return {
+    newSrsStage,
+    nextReviewAt,
+  };
 }

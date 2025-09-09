@@ -1,11 +1,12 @@
+/* eslint-disable react/prop-types */
 'use client';
 
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardBody, CardHeader } from '@heroui/card';
 import { Chip } from '@heroui/chip';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import { formatCompactHour, calculateBarHeight, getReviewCountBarColor } from '@/lib/utils';
-import { useState, useEffect, useMemo } from 'react';
-import { convertUTCToLocal, getLocalNow, debugTimezone } from '@/lib/utils/timezone';
+import { convertUTCToLocal, getLocalNow } from '@/lib/utils/timezone';
 
 interface ReviewScheduleItem {
   hour: Date;
@@ -16,46 +17,32 @@ interface ReviewScheduleProps {
   schedule: ReviewScheduleItem[];
 }
 
-export default function ReviewSchedule({ schedule }: ReviewScheduleProps) {
+const ReviewSchedule = React.memo<ReviewScheduleProps>(function ReviewSchedule({ schedule }) {
   // Responsive hours display
   const [hoursToShow, setHoursToShow] = useState(24);
 
-  useEffect(() => {
-    const updateHoursToShow = () => {
-      if (window.innerWidth < 640) {
-        // sm breakpoint
-        setHoursToShow(8);
-      } else if (window.innerWidth < 1024) {
-        // lg breakpoint
-        setHoursToShow(16);
-      } else {
-        setHoursToShow(24);
-      }
-    };
+  // Memoize the resize handler to prevent recreation on every render
+  const updateHoursToShow = useCallback(() => {
+    if (window.innerWidth < 640) {
+      // sm breakpoint
+      setHoursToShow(8);
+    } else if (window.innerWidth < 1024) {
+      // lg breakpoint
+      setHoursToShow(16);
+    } else {
+      setHoursToShow(24);
+    }
+  }, []);
 
+  useEffect(() => {
     updateHoursToShow();
     window.addEventListener('resize', updateHoursToShow);
     return () => window.removeEventListener('resize', updateHoursToShow);
-  }, []);
+  }, [updateHoursToShow]);
 
   // Convert server UTC dates to local timezone for accurate display
   const localizedSchedule = useMemo(() => {
     const now = getLocalNow();
-
-    // Debug timezone info (remove in production)
-    if (process.env.NODE_ENV === 'development' && schedule.length > 0) {
-      debugTimezone('Review Schedule Conversion');
-      console.log('📊 Schedule Debug:');
-      console.log(
-        'Server schedule (first 3 hours):',
-        schedule.slice(0, 3).map(s => ({
-          hour: s.hour.toISOString(),
-          count: s.count,
-        })),
-      );
-      console.log('Local now:', now.toISOString());
-    }
-
     return schedule
       .map(item => ({
         ...item,
@@ -67,8 +54,22 @@ export default function ReviewSchedule({ schedule }: ReviewScheduleProps) {
       });
   }, [schedule]);
 
-  const totalReviews = localizedSchedule.reduce((sum, item) => sum + item.count, 0);
-  const hoursToDisplay = localizedSchedule.slice(0, hoursToShow);
+  // Memoize expensive calculations
+  const totalReviews = useMemo(
+    () => localizedSchedule.reduce((sum, item) => sum + item.count, 0),
+    [localizedSchedule],
+  );
+
+  const hoursToDisplay = useMemo(
+    () => localizedSchedule.slice(0, hoursToShow),
+    [localizedSchedule, hoursToShow],
+  );
+
+  // Memoize max count calculation for bar heights
+  const maxCount = useMemo(
+    () => (hoursToDisplay.length > 0 ? Math.max(...hoursToDisplay.map(h => h.count)) : 0),
+    [hoursToDisplay],
+  );
 
   return (
     <Card className="hover:shadow-md transition-all duration-200">
@@ -108,7 +109,7 @@ export default function ReviewSchedule({ schedule }: ReviewScheduleProps) {
                     <div
                       className={`w-full ${getReviewCountBarColor(item.count)} rounded-t transition-all group-hover:opacity-80`}
                       style={{
-                        height: `${calculateBarHeight(item.count, hoursToDisplay.length > 0 ? Math.max(...hoursToDisplay.map(h => h.count)) : 0)}px`,
+                        height: `${calculateBarHeight(item.count, maxCount)}px`,
                       }}
                       title={`${item.count} reviews at ${formatCompactHour(item.hour)}`}
                     />
@@ -144,4 +145,6 @@ export default function ReviewSchedule({ schedule }: ReviewScheduleProps) {
       </CardBody>
     </Card>
   );
-}
+});
+
+export default ReviewSchedule;

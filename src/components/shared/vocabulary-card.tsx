@@ -22,7 +22,7 @@ interface VocabularyCardProps {
   variant?: 'full' | 'simple';
 }
 
-export default function VocabularyCard({
+const VocabularyCard = React.memo<VocabularyCardProps>(function VocabularyCard({
   id,
   word,
   meaning,
@@ -129,4 +129,6 @@ export default function VocabularyCard({
       </CardBody>
     </Card>
   );
-}
+});
+
+export default VocabularyCard;

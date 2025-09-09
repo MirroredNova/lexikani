@@ -4,9 +4,6 @@ export * from './text';
 // SRS (Spaced Repetition System) utilities
 export * from './srs';
 
-// Validation utilities
-export * from './validation';
-
 // Quiz and learning utilities
 export * from './quiz';
 

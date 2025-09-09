@@ -38,7 +38,7 @@ interface QuestionCardProps {
   onUndo?: () => void;
 }
 
-export default function QuestionCard({
+const QuestionCard = React.memo<QuestionCardProps>(function QuestionCard({
   questionNumber,
   totalQuestions,
   question,
@@ -329,4 +329,6 @@ export default function QuestionCard({
       </div>
     </>
   );
-}
+});
+
+export default QuestionCard;

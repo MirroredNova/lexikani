@@ -3,7 +3,7 @@
 import { db } from '@/db/db';
 import { language, vocabulary, users } from '@/db/schema';
 import { getCurrentUser } from '@/lib/server/user.actions';
-import { eq, and, like, or, count, SQL } from 'drizzle-orm';
+import { eq, and, like, or, SQL, sql } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import type { VocabularyAttributes, VocabularyType } from '@/types';
@@ -294,16 +294,7 @@ export async function getPaginatedVocabularyForAdmin(
 
   const allConditions = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-  // Get total count for pagination
-  const totalCountResult = await db
-    .select({ count: count() })
-    .from(vocabulary)
-    .where(allConditions);
-
-  const totalCount = totalCountResult[0]?.count || 0;
-  const totalPages = Math.ceil(totalCount / pageSize);
-
-  // Get paginated data with sorting
+  // Determine sort order
   let orderByClause;
   if (filters.sortBy === 'word') {
     orderByClause = [vocabulary.word];
@@ -316,8 +307,10 @@ export async function getPaginatedVocabularyForAdmin(
     orderByClause = [vocabulary.level, vocabulary.word];
   }
 
-  const vocabularyResult = await db
+  // Single optimized query that gets data, count, and language info in one go
+  const results = await db
     .select({
+      // Data fields
       id: vocabulary.id,
       word: vocabulary.word,
       meaning: vocabulary.meaning,
@@ -326,27 +319,29 @@ export async function getPaginatedVocabularyForAdmin(
       attributes: vocabulary.attributes,
       acceptedAnswers: vocabulary.acceptedAnswers,
       languageId: vocabulary.languageId,
+      // Language fields (joined)
+      languageName: language.name,
+      languageCode: language.code,
+      // Total count using window function (same for all rows)
+      totalCount: sql<number>`COUNT(*) OVER()`.as('total_count'),
     })
     .from(vocabulary)
+    .leftJoin(language, eq(vocabulary.languageId, language.id))
     .where(allConditions)
     .orderBy(...orderByClause)
     .limit(pageSize)
     .offset(offset);
 
-  // Get language info for each vocabulary item
-  const languageIds = [...new Set(vocabularyResult.map(item => item.languageId))];
-  const languageData = await db.query.language.findMany({
-    where: or(...languageIds.map(id => eq(language.id, id))),
-  });
+  // Extract data and total count from results
+  const totalCount = results[0]?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
 
-  const languageMap = new Map(languageData.map(lang => [lang.id, lang]));
-
-  const vocabularyWithLanguages = vocabularyResult.map(item => ({
+  const vocabularyWithLanguages = results.map(({ languageName, languageCode, ...item }) => ({
     ...item,
-    language: languageMap.get(item.languageId) || {
+    language: {
       id: item.languageId,
-      name: 'Unknown',
-      code: 'unknown',
+      name: languageName || 'Unknown',
+      code: languageCode || 'unknown',
     },
   }));
 

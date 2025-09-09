@@ -137,42 +137,6 @@ function fuzzyMatchSingle(userInput: string, correctAnswer: string): boolean {
 }
 
 /**
- * Get feedback about why an answer was close but not quite right
- * Useful for showing helpful hints to users
- */
-export function getAnswerFeedback(
-  userInput: string,
-  correctAnswer: string,
-  acceptableAnswers?: string[],
-): {
-  isExact: boolean;
-  isFuzzyMatch: boolean;
-  suggestion?: string;
-} {
-  const normalizedUser = normalizeNorwegianText(userInput);
-  const normalizedCorrect = normalizeNorwegianText(correctAnswer);
-
-  const isExact = normalizedUser === normalizedCorrect;
-  const isFuzzyMatch = fuzzyMatchText(userInput, correctAnswer, acceptableAnswers);
-
-  let suggestion: string | undefined;
-
-  if (!isExact && isFuzzyMatch) {
-    suggestion = 'Close! Check your spelling.';
-  } else if (!isFuzzyMatch) {
-    // Check if it's just a Norwegian character issue
-    const hasNorwegianChars = /[æøå]/i.test(correctAnswer);
-    const userHasPlainChars = /[aeo]/i.test(userInput) && !/[æøå]/i.test(userInput);
-
-    if (hasNorwegianChars && userHasPlainChars) {
-      suggestion = "Remember: you can type 'ae' for 'æ', 'o' for 'ø', 'a' for 'å'";
-    }
-  }
-
-  return { isExact, isFuzzyMatch, suggestion };
-}
-
-/**
  * Auto-generate acceptable answers from a meaning string
  * Extracts alternatives from common patterns like parentheses and commas
  */

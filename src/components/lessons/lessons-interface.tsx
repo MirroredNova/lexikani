@@ -110,24 +110,27 @@ export default function LessonsInterface({ initialLessons, language }: LessonsIn
     };
   }, [handleKeyDown]);
 
-  const handleQuizComplete = async (results: {
-    firstAttemptCorrect: number;
-    totalQuestions: number;
-    allQuestionsCompleted: boolean;
-  }) => {
-    setQuizResults(results);
+  const handleQuizComplete = useCallback(
+    async (results: {
+      firstAttemptCorrect: number;
+      totalQuestions: number;
+      allQuestionsCompleted: boolean;
+    }) => {
+      setQuizResults(results);
 
-    // Sync completed lesson with backend - add all words to user's vocabulary for review
-    try {
-      const vocabularyIds = currentLessons.map(word => word.id);
-      await completeLesson(vocabularyIds);
-    } catch (error) {
-      console.error('Error completing lesson:', error);
-      // Continue anyway - don't block UI for sync errors
-    }
+      // Sync completed lesson with backend - add all words to user's vocabulary for review
+      try {
+        const vocabularyIds = currentLessons.map(word => word.id);
+        await completeLesson(vocabularyIds);
+      } catch (error) {
+        console.error('Error completing lesson:', error);
+        // Continue anyway - don't block UI for sync errors
+      }
 
-    setCurrentPhase('complete');
-  };
+      setCurrentPhase('complete');
+    },
+    [currentLessons],
+  );
 
   const handleBackToLesson = () => {
     setCurrentPhase('learning');
@@ -218,18 +221,6 @@ export default function LessonsInterface({ initialLessons, language }: LessonsIn
             </Card>
           )}
         </div>
-
-        {/* Additional Info */}
-        <Card>
-          <CardBody className="p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center flex items-center justify-center gap-1">
-              <SparklesIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span>
-                Tested both {language.name}→English and English→{language.name} for each word
-              </span>
-            </p>
-          </CardBody>
-        </Card>
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">

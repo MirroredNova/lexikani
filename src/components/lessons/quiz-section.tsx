@@ -1,16 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 // import { Button } from '@heroui/button';
-import type { VocabularyItem, QuizQuestion, Language } from '@/types';
+import type { VocabularyItem, Language } from '@/types';
 import { ProgressBar, QuestionCard, SessionHeader } from '@/components/shared';
 import WordDetailsPanel from '@/components/shared/word-details-panel';
-import {
-  fuzzyMatchText,
-  generateQuizQuestions,
-  calculateProgress,
-  generateAcceptableAnswers,
-} from '@/lib/utils';
+import { calculateProgress, fuzzyMatchText } from '@/lib/utils';
+import { useQuizState } from '@/hooks/use-quiz-state';
 
 interface QuizSectionProps {
   words: VocabularyItem[];
@@ -24,156 +20,51 @@ interface QuizSectionProps {
 }
 
 export default function QuizSection({ words, onComplete, onBack, language }: QuizSectionProps) {
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userInput, setUserInput] = useState<string>('');
-  const [showResult, setShowResult] = useState(false);
-  const [wrongAnswers, setWrongAnswers] = useState<QuizQuestion[]>([]);
-  const [retestWrongAnswers, setRetestWrongAnswers] = useState<QuizQuestion[]>([]);
-  const [totalQuestions, setTotalQuestions] = useState(0);
-  const [firstAttemptCorrect, setFirstAttemptCorrect] = useState(0);
-  const [isRetestPhase, setIsRetestPhase] = useState(false);
-  const [canUndo, setCanUndo] = useState(false);
-  const [lastAnswer, setLastAnswer] = useState<{
-    wasCorrect: boolean;
-    userInput: string;
-    firstAttemptCorrect: number;
-    wrongAnswers: QuizQuestion[];
-    retestWrongAnswers: QuizQuestion[];
-  } | null>(null);
-  const [showWordDetails, setShowWordDetails] = useState(false);
+  // Use custom hook for state management
+  const {
+    // State
+    questions,
+    userInput,
+    showResult,
+    totalQuestions,
+    firstAttemptCorrect,
+    isRetestPhase,
+    canUndo,
+    lastAnswer,
+    showWordDetails,
+    currentQuestion,
+    questionsAnswered,
+    quizComplete,
+    // Actions
+    actions,
+  } = useQuizState(words);
 
-  useEffect(() => {
-    const shuffledQuestions = generateQuizQuestions(words);
-    setQuestions(shuffledQuestions);
-    setTotalQuestions(shuffledQuestions.length);
-  }, [words]);
+  // Derived progress calculation
+  const progress = useMemo(
+    () => calculateProgress(questionsAnswered, totalQuestions),
+    [questionsAnswered, totalQuestions],
+  );
 
-  const currentQuestion = questions[currentQuestionIndex];
-  // Calculate progress based on original questions only, not including retests
-  const questionsAnswered = isRetestPhase
-    ? totalQuestions
-    : Math.min(currentQuestionIndex + 1, totalQuestions);
-  const progress = calculateProgress(questionsAnswered, totalQuestions);
-
+  // Handle quiz completion and navigation
   const handleNextQuestion = useCallback(() => {
-    // Disable undo when moving to next question
-    setCanUndo(false);
+    actions.nextQuestion();
+  }, [actions]);
 
-    // Don't clear lastAnswer on final question to preserve visual feedback
-    if (currentQuestionIndex < questions.length - 1) {
-      setLastAnswer(null);
-    }
+  const handleSubmitAnswer = useCallback(() => {
+    if (!userInput.trim() || !currentQuestion) return;
+    actions.submitAnswer(currentQuestion, userInput);
+  }, [userInput, currentQuestion, actions]);
 
-    setShowWordDetails(false);
-
-    if (currentQuestionIndex < questions.length - 1) {
-      // Move to next question
-      setCurrentQuestionIndex(prev => prev + 1);
-      setUserInput('');
-      setShowResult(false);
-    } else if (wrongAnswers.length > 0 && !isRetestPhase) {
-      // Start retest phase - add wrong answers back to the queue
-      setQuestions(prev => [...prev, ...wrongAnswers]);
-      setWrongAnswers([]);
-      setIsRetestPhase(true);
-      setCurrentQuestionIndex(prev => prev + 1);
-      setUserInput('');
-      setShowResult(false);
-    } else if (retestWrongAnswers.length > 0) {
-      // Continue retest phase - add remaining wrong retest answers back to the queue
-      // Keep retesting until all questions are answered correctly
-      setQuestions(prev => [...prev, ...retestWrongAnswers]);
-      setRetestWrongAnswers([]);
-      setIsRetestPhase(true); // Ensure we stay in retest mode
-      setCurrentQuestionIndex(prev => prev + 1);
-      setUserInput('');
-      setShowResult(false);
-    } else {
-      // Quiz complete - all questions answered correctly
+  // Handle quiz completion
+  useEffect(() => {
+    if (quizComplete) {
       onComplete({
-        firstAttemptCorrect: firstAttemptCorrect,
-        totalQuestions: totalQuestions,
+        firstAttemptCorrect,
+        totalQuestions,
         allQuestionsCompleted: true,
       });
     }
-  }, [
-    currentQuestionIndex,
-    questions.length,
-    wrongAnswers,
-    retestWrongAnswers,
-    isRetestPhase,
-    firstAttemptCorrect,
-    totalQuestions,
-    onComplete,
-  ]);
-
-  const handleUndo = useCallback(() => {
-    if (!canUndo || !lastAnswer) return;
-
-    // Restore previous state
-    setFirstAttemptCorrect(lastAnswer.firstAttemptCorrect);
-    setWrongAnswers(lastAnswer.wrongAnswers);
-    setRetestWrongAnswers(lastAnswer.retestWrongAnswers);
-    setUserInput(lastAnswer.userInput);
-    setShowResult(false);
-    setCanUndo(false);
-    setLastAnswer(null);
-  }, [canUndo, lastAnswer]);
-
-  const handleShowDetails = useCallback(() => {
-    setShowWordDetails(prev => !prev);
-  }, []);
-
-  const handleSubmitAnswer = () => {
-    if (!userInput.trim()) return;
-
-    // Store current state before making changes (for potential undo)
-    const currentState = {
-      wasCorrect: false, // Will be updated below
-      userInput: userInput,
-      firstAttemptCorrect: firstAttemptCorrect,
-      wrongAnswers: [...wrongAnswers],
-      retestWrongAnswers: [...retestWrongAnswers],
-    };
-
-    // Get acceptable answers - only use for word-to-meaning direction
-    let acceptableAnswers: string[] | undefined;
-
-    if (currentQuestion.direction === 'word-to-meaning') {
-      // User types English meaning - use stored alternatives or generate from meaning
-      acceptableAnswers =
-        currentQuestion.word.acceptedAnswers ||
-        generateAcceptableAnswers(currentQuestion.correctAnswer);
-    } else {
-      // User types Norwegian word - don't use alternatives (Norwegian should be exact)
-      acceptableAnswers = undefined;
-    }
-
-    const isCorrect = fuzzyMatchText(userInput, currentQuestion.correctAnswer, acceptableAnswers);
-    currentState.wasCorrect = isCorrect;
-
-    if (isCorrect) {
-      // Only count towards first attempt if not in retest phase
-      if (!isRetestPhase) {
-        setFirstAttemptCorrect(prev => prev + 1);
-      }
-    } else {
-      // Track wrong answers appropriately based on phase
-      if (!isRetestPhase) {
-        // Initial phase - add to wrong answers for retest
-        setWrongAnswers(prev => [...prev, currentQuestion]);
-      } else {
-        // Retest phase - add to retest wrong answers for another round
-        setRetestWrongAnswers(prev => [...prev, currentQuestion]);
-      }
-    }
-
-    // Always enable undo and store current state
-    setCanUndo(true);
-    setLastAnswer(currentState);
-    setShowResult(true);
-  };
+  }, [quizComplete, firstAttemptCorrect, totalQuestions, onComplete]);
 
   // Handle backspace key for undo
   useEffect(() => {
@@ -185,20 +76,28 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
       if (isBackspaceKey && canUndo && showResult) {
         event.preventDefault();
         event.stopPropagation();
-        handleUndo();
+        actions.undoAnswer();
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase
+    document.addEventListener('keydown', handleKeyDown, true);
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [canUndo, showResult, handleUndo]);
+  }, [canUndo, showResult, actions]);
 
   if (questions.length === 0) {
     return (
       <div className="text-center">
         <p>Loading quiz...</p>
+      </div>
+    );
+  }
+
+  if (!currentQuestion) {
+    return (
+      <div className="text-center">
+        <p>No question available...</p>
       </div>
     );
   }
@@ -229,7 +128,7 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
         question={currentQuestion.question}
         direction={currentQuestion.direction}
         userInput={userInput}
-        onInputChange={setUserInput}
+        onInputChange={actions.setUserInput}
         onSubmit={handleSubmitAnswer}
         onNext={handleNextQuestion}
         showResult={showResult}
@@ -243,7 +142,7 @@ export default function QuizSection({ words, onComplete, onBack, language }: Qui
           level: currentQuestion.word.level,
           attributes: currentQuestion.word.attributes,
         }}
-        onShowDetails={handleShowDetails}
+        onShowDetails={actions.toggleWordDetails}
         language={language}
         additionalFeedback={
           showResult && (

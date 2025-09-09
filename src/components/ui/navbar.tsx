@@ -119,47 +119,8 @@ const NavigationBar = () => {
               <ThemeToggle size="sm" />
             </NavbarItem>
 
-            {/* Desktop: Individual Buttons */}
-            <NavbarItem className="hidden md:flex">
-              <Button
-                as={NextLink}
-                href="/profile"
-                variant="light"
-                startContent={<UserIcon className="w-4 h-4" />}
-                size="sm"
-              >
-                Profile
-              </Button>
-            </NavbarItem>
-
-            {isAdmin && (
-              <NavbarItem className="hidden md:flex">
-                <Button
-                  as={NextLink}
-                  href="/admin"
-                  variant="light"
-                  startContent={<Cog6ToothIcon className="w-4 h-4" />}
-                  size="sm"
-                >
-                  Admin
-                </Button>
-              </NavbarItem>
-            )}
-
-            <NavbarItem className="hidden md:flex">
-              <Button
-                onPress={handleLogout}
-                variant="light"
-                color="danger"
-                startContent={<ArrowRightStartOnRectangleIcon className="w-4 h-4" />}
-                size="sm"
-              >
-                Logout
-              </Button>
-            </NavbarItem>
-
-            {/* Mobile: Dropdown Menu for Actions */}
-            <NavbarItem className="md:hidden">
+            {/* User actions dropdown (all breakpoints) */}
+            <NavbarItem>
               <Dropdown>
                 <DropdownTrigger>
                   <Button variant="light" isIconOnly size="sm" aria-label="User menu">

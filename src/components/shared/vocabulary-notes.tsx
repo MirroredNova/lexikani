@@ -17,7 +17,7 @@ interface VocabularyNotesProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export default function VocabularyNotes({
+const VocabularyNotes = React.memo<VocabularyNotesProps>(function VocabularyNotes({
   vocabularyId,
   word,
   initialNote = null,
@@ -173,4 +173,6 @@ export default function VocabularyNotes({
       </Modal>
     </>
   );
-}
+});
+
+export default VocabularyNotes;

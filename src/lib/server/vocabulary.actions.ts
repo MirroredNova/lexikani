@@ -440,20 +440,7 @@ export async function getPaginatedVocabularyWithProgress(
   const allConditions =
     srsConditions.length > 0 ? and(...whereConditions, ...srsConditions) : and(...whereConditions);
 
-  // Get total count for pagination
-  const totalCountResult = await db
-    .select({ count: count() })
-    .from(vocabulary)
-    .leftJoin(
-      userVocabulary,
-      and(eq(userVocabulary.vocabularyId, vocabulary.id), eq(userVocabulary.userId, user.id)),
-    )
-    .where(allConditions);
-
-  const totalCount = totalCountResult[0]?.count || 0;
-  const totalPages = Math.ceil(totalCount / pageSize);
-
-  // Get paginated data with sorting
+  // Determine sort order
   let orderByClause;
   if (filters.sortBy === 'word') {
     orderByClause = [vocabulary.word];
@@ -468,8 +455,10 @@ export async function getPaginatedVocabularyWithProgress(
     orderByClause = [vocabulary.level, vocabulary.word];
   }
 
-  const vocabularyData = await db
+  // Single optimized query that gets both data and count using window function
+  const results = await db
     .select({
+      // Data fields
       id: vocabulary.id,
       word: vocabulary.word,
       meaning: vocabulary.meaning,
@@ -482,6 +471,8 @@ export async function getPaginatedVocabularyWithProgress(
       unlockedAt: userVocabulary.unlockedAt,
       updatedAt: userVocabulary.updatedAt,
       notes: userVocabulary.notes,
+      // Total count using window function (same for all rows)
+      totalCount: sql<number>`COUNT(*) OVER()`.as('total_count'),
     })
     .from(vocabulary)
     .leftJoin(
@@ -492,6 +483,11 @@ export async function getPaginatedVocabularyWithProgress(
     .orderBy(...orderByClause)
     .limit(pageSize)
     .offset(offset);
+
+  // Extract data and total count from results
+  const vocabularyData = results.map(({ ...data }) => data);
+  const totalCount = results[0]?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   return {
     data: vocabularyData as Array<{

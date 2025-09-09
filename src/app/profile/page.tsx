@@ -59,24 +59,6 @@ export default async function ProfilePage() {
     9: { name: 'Burned', description: 'Permanently learned', color: 'bg-orange-500' },
   };
 
-  // Debug output
-  console.log('=== DEBUG: SRS Distribution ===');
-  console.log(`Total words: ${totalWords}`);
-  srsDistribution.forEach(({ stage, count, words }) => {
-    console.log(`\nSRS ${stage} (${srsStageInfo[stage].name}): ${count} words`);
-    if (count > 0) {
-      words.forEach(stat => {
-        console.log(
-          `  - ${stat.vocabulary.word} (${stat.vocabulary.meaning}) - Level: ${stat.vocabulary.level}`,
-        );
-      });
-    }
-  });
-
-  const totalCheck = srsDistribution.reduce((sum, { count }) => sum + count, 0);
-  console.log(`\nTotal check: ${totalCheck} (should equal ${totalWords})`);
-  console.log('==============================');
-
   return (
     <PageContainer>
       <div className="space-y-8">
