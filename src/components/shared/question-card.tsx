@@ -163,12 +163,6 @@ const QuestionCard = React.memo<QuestionCardProps>(function QuestionCard({
               color={showResult ? (isCorrect ? 'success' : 'danger') : 'default'}
               onKeyDown={handleInputKeyDown}
             />
-            {!showResult && (
-              <p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-                Press <kbd className="bg-gray-200 dark:bg-gray-600 px-1 rounded text-xs">Enter</kbd>{' '}
-                to submit
-              </p>
-            )}
           </div>
 
           {showResult && (

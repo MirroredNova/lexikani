@@ -7,8 +7,13 @@ import type { ReviewItem, Language } from '@/types';
 import { reviewWord } from '@/lib/server/vocabulary.actions';
 import { ProgressBar, QuestionCard, SessionHeader } from '@/components/shared';
 import WordDetailsPanel from '@/components/shared/word-details-panel';
-import { CheckCircleIcon, ArrowPathIcon, HomeIcon } from '@heroicons/react/24/outline';
-import { calculateProgress } from '@/lib/utils';
+import {
+  CheckCircleIcon,
+  ArrowPathIcon,
+  HomeIcon,
+  ArrowRightIcon,
+} from '@heroicons/react/24/outline';
+import { calculateProgress, getSrsStageInfo } from '@/lib/utils';
 import { useReviewState } from '@/hooks/use-review-state';
 
 interface ReviewInterfaceProps {
@@ -35,6 +40,7 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
     currentQuestion,
     questionsAnswered,
     showPairResult,
+    completedPairs,
     // Actions
     actions,
   } = useReviewState(initialReviews);
@@ -223,9 +229,14 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
         subtitle={`${initialReviews.length} words • ${totalQuestions} questions`}
         onBack={() => window.history.back()}
         rightContent={
-          <span>
-            {correctAnswers}/{questionsAnswered} correct
-          </span>
+          <div className="text-right text-sm">
+            <div>
+              {correctAnswers}/{questionsAnswered} correct
+            </div>
+            <div className="text-xs opacity-75">
+              {completedPairs}/{initialReviews.length} pairs done
+            </div>
+          </div>
         }
       />
 
@@ -269,35 +280,51 @@ export default function ReviewInterface({ initialReviews, language }: ReviewInte
                   srsStage={currentQuestion.item.srsStage}
                 />
               )}
-              {showPairResult && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  {(() => {
-                    const pair = reviewPairs.get(currentQuestion.pairId);
-                    if (!pair || !pair.srsProgression) return null;
+              {showPairResult &&
+                (() => {
+                  const pair = reviewPairs.get(currentQuestion.pairId);
+                  if (!pair || !pair.srsProgression) return null;
 
-                    const bothCorrect = pair.wordToMeaning === true && pair.meaningToWord === true;
-                    const { from, to } = pair.srsProgression;
+                  const bothCorrect = pair.wordToMeaning === true && pair.meaningToWord === true;
+                  const { from, to } = pair.srsProgression;
 
-                    return (
+                  return (
+                    <div
+                      className={`${
+                        bothCorrect
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                      } border rounded-lg p-4`}
+                    >
                       <div className="text-center">
-                        <p className="font-medium text-green-800 dark:text-green-200">
-                          {bothCorrect ? 'Pair Complete!' : 'Pair Failed'}
-                        </p>
-                        <p className="text-sm text-green-600 dark:text-green-300 mt-1">
-                          {bothCorrect
-                            ? `SRS: ${from} to ${to}${to === 9 ? ' (Burned!)' : ''}`
-                            : from <= 1
-                              ? 'SRS: remains at 1 (Apprentice I)'
-                              : `SRS: ${from} to 1 (Reset to Apprentice I)`}
-                        </p>
-                        <p className="text-xs text-green-500 dark:text-green-400 mt-1">
-                          Both directions must be correct to progress
+                        <p
+                          className={`text-sm mt-1 ${
+                            bothCorrect
+                              ? 'text-green-600 dark:text-green-300'
+                              : 'text-red-600 dark:text-red-300'
+                          }`}
+                        >
+                          {bothCorrect ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span>{getSrsStageInfo(from).name}</span>
+                              <ArrowRightIcon
+                                className={`w-4 h-4 ${
+                                  bothCorrect
+                                    ? 'text-green-600 dark:text-green-300'
+                                    : 'text-red-600 dark:text-red-300'
+                                }`}
+                                aria-hidden="true"
+                              />
+                              <span>{getSrsStageInfo(to).name}</span>
+                            </span>
+                          ) : (
+                            `Stays at ${getSrsStageInfo(from <= 1 ? 1 : 1).name}`
+                          )}
                         </p>
                       </div>
-                    );
-                  })()}
-                </div>
-              )}
+                    </div>
+                  );
+                })()}
             </>
           )
         }

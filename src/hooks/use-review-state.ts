@@ -218,6 +218,10 @@ export function useReviewState(initialReviews: ReviewItem[]) {
     [state.showResult, currentPair],
   );
 
+  const completedPairs = useMemo(() => {
+    return Array.from(state.reviewPairs.values()).filter(pair => pair.completed).length;
+  }, [state.reviewPairs]);
+
   // Clean action methods
   const actions = {
     setUserInput: useCallback((input: string) => {
@@ -293,6 +297,7 @@ export function useReviewState(initialReviews: ReviewItem[]) {
     currentPair,
     questionsAnswered,
     showPairResult,
+    completedPairs,
 
     // Actions
     actions,
